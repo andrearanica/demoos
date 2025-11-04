@@ -1,5 +1,6 @@
 #include <stddef.h>
 #include <stdint.h>
+#include "../drivers/utils.h"
 #include "../drivers/uart.h"
 #include "../drivers/framebuffer.h"
 
