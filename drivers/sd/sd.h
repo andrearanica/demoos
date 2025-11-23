@@ -63,4 +63,19 @@
 #define CMD_SEND_OP_COND    (0x29020000|CMD_NEED_APP)
 #define CMD_SEND_SCR        (0x33220010|CMD_NEED_APP)
 
+#define ACMD41_VOLTAGE      0x00ff8000
+#define ACMD41_CMD_COMPLETE 0x80000000
+#define ACMD41_CMD_CCS      0x40000000
+#define ACMD41_ARG_HC       0x51ff8000
+
+// SCR flags
+#define SCR_SD_BUS_WIDTH_4  0x00000400
+#define SCR_SUPP_SET_BLKCNT 0x02000000
+#define SCR_SUPP_CCS        0x00000001
+
+// CONTROL register settings
+#define C0_SPI_MODE_EN      0x00100000
+#define C0_HCTL_HS_EN       0x00000004
+#define C0_HCTL_DWIDTH      0x00000002
+
 int sd_init(void);

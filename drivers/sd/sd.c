@@ -7,11 +7,13 @@ void enable_clock_and_command();
 void enable_data_pins();
 void reset_emmc();
 int sd_set_clock(unsigned int);
-int sd_cmd(unsigned int, unsigned int);
+int sd_execute_command(unsigned int, unsigned int);
 int sd_status(unsigned int);
 int sd_wait_for_interrupt(unsigned int);
+int sd_enable_card();
+long sd_get_rca();
 
-long sd_standard_version;
+long sd_standard_version, ccs;
 
 unsigned long sd_scr[2], sd_rca, sd_error;
 
@@ -42,10 +44,89 @@ int sd_init() {
     *EMMC_INT_MASK = 0xFFFFFFFF;
 
     sd_scr[0] = sd_scr[1] = sd_rca = sd_error = 0;
-    sd_cmd(CMD_GO_IDLE, 0);
+
+    // I execute the following two commands because this is how the DS
+    // standard works
+
+    sd_execute_command(CMD_GO_IDLE, 0);
     if (sd_error) {
         return sd_error;
     }
+
+    sd_execute_command(CMD_SEND_IF_COND, 0x1AA);
+    if (sd_error) {
+        return sd_error;
+    }
+
+    int enable_result = sd_enable_card();
+    if (enable_result == SD_ERROR) {
+        return SD_ERROR;
+    }
+
+    // Asks the SD for its Card Identificator
+    sd_execute_command(CMD_ALL_SEND_CID, 0);
+
+    // Then the SD generates a Relative Card Address
+    long sd_rca = sd_execute_command(CMD_SEND_REL_ADDR, 0);
+    uart_puts("[DEBUG] EMMC command CMD_SEND_REL_ADDR returned ");
+    uart_hex(sd_rca >> 32);
+    uart_hex(sd_rca);
+    uart_puts("\n");
+    if (sd_error) {
+        return sd_error;
+    }
+
+    long response;
+    if ((response = sd_set_clock(25000000))) {
+        return response;
+    }
+
+    // Then I select the SD using its RCA
+    sd_execute_command(CMD_CARD_SELECT, sd_rca);
+    if (sd_error) {
+        return sd_error;
+    }
+
+    if (sd_status(SR_DAT_INHIBIT)) {
+        return SD_TIMEOUT;
+    }
+
+    // This registers tells the CPU to read 1 block of 8 bytes
+    *EMMC_BLKSIZECNT = (1 << 16) | 8;
+    sd_execute_command(CMD_SEND_SCR, 0);
+    if (sd_error) {
+        return sd_error;
+    }
+
+    if (sd_wait_for_interrupt(INT_READ_RDY)) {
+        return SD_TIMEOUT;
+    }
+
+    // I read 2 words from EMMC_DATA to sd_scr
+    response = 0;
+    long counter = 100000;
+    while (response < 2 && counter) {
+        if (*EMMC_STATUS & SR_READ_AVAILABLE) {
+            sd_scr[response++] = *EMMC_DATA;
+        } else {
+            wait_msec(1);
+        }
+    }
+
+    if (response != 2) {
+        return SD_TIMEOUT;
+    }
+
+    if (sd_scr[0] & SCR_SD_BUS_WIDTH_4) {
+        sd_execute_command(CMD_SET_BUS_WIDTH, sd_rca | 2);
+        if (sd_error) {
+            return sd_error;
+        }
+        *EMMC_CONTROL0 |= C0_HCTL_DWIDTH;
+    }
+
+    sd_scr[0] &= ~SCR_SUPP_CCS;
+    sd_scr[0] |= ccs;
 
     return SD_OK;
 }
@@ -210,13 +291,13 @@ int sd_set_clock(unsigned int frequency) {
     return SD_OK;
 }
 
-int sd_cmd(unsigned int code, unsigned int arg) {
+int sd_execute_command(unsigned int code, unsigned int arg) {
     int response = 0;
     sd_error = SD_OK;
 
     // If the code is application specific, first I need to send an APP command
     if (code & CMD_NEED_APP) {
-        response = sd_cmd(CMD_APP_CMD | sd_rca ? CMD_RSPNS_48 : 0, sd_rca);
+        response = sd_execute_command(CMD_APP_CMD | sd_rca ? CMD_RSPNS_48 : 0, sd_rca);
         if (sd_rca && !response) {
             uart_puts("[ERROR] Failed to send SD APP command\n");
             sd_error = SD_ERROR;
@@ -285,7 +366,7 @@ int sd_status(unsigned int mask) {
 
 int sd_wait_for_interrupt(unsigned int mask) {
     unsigned int response, m = mask | INT_ERROR_MASK;
-    int counter = 100000;
+    int counter = 10; // TODO make this 100000 when we'll have EMMC
     while (!(*EMMC_INTERRUPT & m) && counter--) {
         wait_msec(1);
     }
@@ -301,6 +382,49 @@ int sd_wait_for_interrupt(unsigned int mask) {
 
     *EMMC_INTERRUPT = mask;
     return 0;
+}
+
+int sd_enable_card() {
+    long counter = 6, response = 0;
+    while (!(response & ACMD41_CMD_COMPLETE) && counter--) {
+        delay(400);
+        // This commands tells the SD to start the powerup
+        response = sd_execute_command(CMD_SEND_OP_COND, ACMD41_ARG_HC);
+        uart_puts("[DEBUG] EMMC executed CMD_SEND_OP_COND and returned ");
+        // This bit tells if the SD power-up is completed
+        if (response & ACMD41_CMD_COMPLETE) {
+            uart_puts("COMPLETE ");
+        }
+        // This bit tells if the 3.3v tension is supported
+        if (response & ACMD41_VOLTAGE) {
+            uart_puts("VOLTAGE ");
+        }
+        // This bit is 1 if the card capacity is enabled
+        if (response & ACMD41_CMD_CCS) {
+            uart_puts("CSS ");
+        }
+        uart_hex(response >> 32);
+        uart_hex(response);
+        uart_puts("\n");
+
+        if (sd_error != SD_TIMEOUT && sd_error != SD_OK) {
+            uart_puts("[ERROR] EMMC ACMD41 returned error\n");
+            return SD_ERROR;
+        }
+    }
+
+    if (!(response & ACMD41_CMD_COMPLETE) || !counter) {
+        return SD_ERROR;
+    }
+    if (!(response & ACMD41_VOLTAGE)) {
+        return SD_ERROR;
+    }
+    ccs = 0;
+    if (!(response & ACMD41_CMD_CCS)) {
+        ccs = SCR_SUPP_CCS;
+    }
+
+    return SD_OK;
 }
 
 // TODO move from here to util

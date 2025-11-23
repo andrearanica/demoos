@@ -24,6 +24,7 @@ void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3)
     enable_interrupt_controller();
     enable_irq();
 
+    // EMMC non funziona su qemu
     int sd_ok = sd_init();
     if (sd_ok == SD_OK) {
         uart_puts("SD card initialized OK\n");
