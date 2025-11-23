@@ -1,6 +1,7 @@
 #include "uart.h"
 #include <stddef.h> 
 #include "../../libs/mmio.h"
+#include "../../libs/utils.h"
 #include "../mbox/mbox.h"
 
 void uart_init()
