@@ -1,5 +1,5 @@
-#ifndef _IRQ_H
-#define _IRQ_H
+#ifndef _CONTROLLER_H
+#define _CONTROLLER_H
 
 // Offsets relativi a MMIO_BASE (0x3F000000 su Raspberry Pi 3)
 #define IRQ_BASIC_PENDING   0x0000B200
@@ -27,5 +27,4 @@ void irq_vector_init(void);
 void enable_irq(void);
 void disable_irq(void);
 
-#endif  /* _IRQ_H */
-
+#endif
