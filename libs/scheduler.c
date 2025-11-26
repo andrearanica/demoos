@@ -18,8 +18,6 @@ void preempt_disable() {
 }
 
 void _schedule() {
-    uart_puts("[DEBUG] _schedule invoked\n");
-
     preempt_disable();
     long max_counter, next_process_index;
     while (1) {
@@ -50,6 +48,7 @@ void _schedule() {
     preempt_enable();
 }
 
+// Asks the scheduler to terminate the current project to run another one
 void schedule() {
     // I give the current process the lower priority
     current_process->counter = 0;
@@ -62,11 +61,6 @@ void switch_to_process(struct PCB* next_process) {
     }
     struct PCB* previous_process = current_process;
     current_process = next_process;
-    uart_puts("Switching from process ");
-    uart_hex(previous_process);
-    uart_puts(" to process ");
-    uart_hex(current_process);
-    uart_puts("\n");
     cpu_switch_to_process(previous_process, current_process);
 }
 
@@ -84,4 +78,10 @@ void handle_timer_tick() {
     enable_irq();
     _schedule();
     disable_irq();
+}
+
+// Terminates the current process
+int exit() {
+    current_process->state = PROCESS_TERMINATED;
+    _schedule();
 }

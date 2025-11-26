@@ -8,7 +8,7 @@
 #include "../drivers/irq/controller.h"
 #include "../drivers/sd/sd.h"
 
-void process(char* array);
+void process(int i);
 
 void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3)
 {
@@ -31,14 +31,10 @@ void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3)
     } else {
         uart_puts("SD card initialization FAILED\n");
     }
-*/
-    int error = fork((unsigned long)&process, (unsigned long)"1");
-    if (error) {
-        uart_puts("Error creating first process\n");
-    }
-    int error1 = fork((unsigned long)&process, (unsigned long)"2");
-    if (error1) {
-        uart_puts("Error creating second process\n");
+    */
+
+    for (int i = 0; i < 15; i++) {
+        fork(process, i);
     }
 
     while (1) {
@@ -46,10 +42,9 @@ void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3)
     }
 }
 
-void process(char* array) {
-    while (1) {
-        uart_puts("Sono il processo ");
-        uart_puts(array);
-        uart_puts("\n");
-    }
+void process(int a) {
+    uart_puts("Sono il processo ");
+    uart_hex(a);
+    uart_puts("\n");
+    exit();
 }

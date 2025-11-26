@@ -29,13 +29,15 @@ struct PCB {
     long counter;
     long priority;
     int preempt_disabled;
+    long pid;
 };
 
 #define PROCESS_RUNNING 1
+#define PROCESS_TERMINATED 2
 
 #define INIT_PROCESS \
     { {0,0,0,0,0,0,0,0,0,0,0,0,0}, \
-    0, 1, 1, 0 \
+    0, 1, 1, 0, 0 \
 }
 
 extern struct PCB* current_process;
