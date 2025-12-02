@@ -1,6 +1,7 @@
 #include "uart.h"
 #include <stddef.h>
 #include "../../libs/mmio.h"
+#include "../../libs/utils.h"
 #include "../mbox/mbox.h"
 #include "../../libs/utils.h"
 
@@ -77,7 +78,7 @@ void uart_puts(const char* str)
 		uart_putc((unsigned char)str[i]);
 }
 
-void putc ( void* p, char c)
+void putc(char c)
 {
 	uart_putc(c);
 }

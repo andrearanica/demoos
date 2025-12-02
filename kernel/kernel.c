@@ -25,9 +25,16 @@ void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3)
 
     int res = fork(PF_KTHREAD, (unsigned long)&kernel_process, 0, 0);
 
-    while (1) {
+	// Non serve piu', lo switch dei processi e' ora deciso dal timer
+    /*while (1) {
         schedule();
-    }
+    }*/
+
+	// Necessario solo per SCHEDULING COOPERATIVO,
+	// Forza l'esecuzione del primo processo
+	// modificare linea 74, libs/scheduler.c ogni volta che si cambia modalita'
+	//schedule();
+
 }
 
 void kernel_process() {
@@ -37,6 +44,20 @@ void kernel_process() {
     if (error < 0) {
         uart_puts("[ERROR] Cannot move process from kernel mode to user mode\n");
     }
+
+}
+
+void process(int a) {
+	while(1) {
+		uart_puts("Sono il processo ");
+		uart_hex(a);
+		uart_puts("\n");
+		for (volatile unsigned long i = 0; i < 20000000; i++); // Simula lavoro}
+		
+		// Necessario solo per SCHEDULING COOPERATIVO,
+		// modificare linea 74, libs/scheduler.c ogni volta che si cambia modalita'
+		//schedule();
+	}
 }
 
 void user_process() {
