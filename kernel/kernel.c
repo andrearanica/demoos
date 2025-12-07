@@ -25,18 +25,12 @@ void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3)
 
     // int res = fork(PF_KTHREAD, (unsigned long)&kernel_process, 0, 0);
 
-    sd_init();
-
-	// Non serve piu', lo switch dei processi e' ora deciso dal timer
-    /*while (1) {
-        schedule();
-    }*/
-
-	// Necessario solo per SCHEDULING COOPERATIVO,
-	// Forza l'esecuzione del primo processo
-	// modificare linea 74, libs/scheduler.c ogni volta che si cambia modalita'
-	//schedule();
-
+    int sd_result = sd_init();
+    if (sd_result == SD_OK) {
+        uart_puts("[DEBUG] SD init successful\n");
+    } else {
+        uart_puts("[DEBUG] SD init error\n");
+    }
 }
 
 void kernel_process() {
@@ -55,7 +49,7 @@ void process(int a) {
 		uart_hex(a);
 		uart_puts("\n");
 		for (volatile unsigned long i = 0; i < 20000000; i++); // Simula lavoro}
-		
+
 		// Necessario solo per SCHEDULING COOPERATIVO,
 		// modificare linea 74, libs/scheduler.c ogni volta che si cambia modalita'
 		//schedule();

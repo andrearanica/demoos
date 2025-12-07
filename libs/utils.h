@@ -3,6 +3,5 @@
 
 extern int get_el(void);
 extern void delay(unsigned long);
-extern void wait_msec(unsigned int);
 
 #endif
