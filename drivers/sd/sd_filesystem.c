@@ -1,5 +1,6 @@
 #include "sd_filesystem.h"
 #include "sd.h"
+#include "../../libs/allocator.h"
 #include "../../libs/fat32/fat.h"
 #include "../../drivers/uart/uart.h"
 
@@ -35,9 +36,11 @@ int sd_filesystem_init() {
     if (mount_error) {
         uart_puts("[ERROR] Cannot mount filesystem.\n");
         return SD_FILESYSTEM_INIT_ERROR;
-    }
+    } else {
+        uart_puts("[DEBUG] Filesystem mounted.\n");
+    }*/
 
-    File file;
+    /*File file;
     int open_file_error = fat_file_open(&file, "/mnt/source/fat.c", FAT_READ);
     if (open_file_error) {
         uart_puts("[ERROR] Cannot open file '/mnt/source/fat.c'.\n");

@@ -18,22 +18,25 @@ memcmp:
     // If the number of bytes to check is zero, I return true
     cbz x2, .lEqual
 
+.lLoop:
     // I store the given addresses in two registers
     ldrb w3, [x0], #1
     ldrb w4, [x1], #1
+    // I perform the subtraction of the two memory addresses
+    subs w5, w3, w4
+
+    // If the subtraction is not zero, I exit because the two addresses
+    // don't have the same content
+    cbnz w5, .lExit
+
     // I decrease the counter of the bytes to compare
     subs x2, x2, #1
 
-    // I perform the subtraction of the two memory addresses
-    subs w0, w3, w4
-    // If the subtraction is not zero, I exit because the two addresses
-    // don't have the same content
-    cbnz w0, .lExit
-    // Otherwhise I continue checking the next bytes 
-    b memcmp
+    // Otherwhise I continue checking the next bytes
+    cbnz x2, .lLoop
 
 .lEqual:
-    mov x0, #0
+    mov w5, #0
 
 
 .globl memset
@@ -47,4 +50,5 @@ memset:
     b memset
 
 .lExit:
+    mov w0, w5
     ret
