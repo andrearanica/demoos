@@ -4,7 +4,7 @@ LD := aarch64-elf-ld
 OBJCOPY := aarch64-elf-objcopy
 
 # Flags
-CFLAGS := -Wall -Wextra -O2 -ffreestanding -nostdlib -nostartfiles
+CFLAGS := -Wall -Wextra -O2 -ffreestanding -nostdlib -nostartfiles -mgeneral-regs-only -mstrict-align
 LDFLAGS := -nostdlib
 
 # Sources

@@ -1,4 +1,5 @@
 #include "allocator.h"
+#include "utils.h"
 
 static unsigned short memory_pages[N_PAGES] = {0};
 

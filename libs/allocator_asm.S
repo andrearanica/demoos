@@ -7,8 +7,8 @@ memzero:
 
 .globl memcpy
 memcpy:
-    ldr x3, [x1], #8
-    str x3, [x0], #8
+    ldrb w3, [x1], #8
+    strb w3, [x0], #8
     subs x2, x2, #8
     b.gt memcpy
     ret
@@ -43,7 +43,7 @@ memcmp:
 memset:
     // If the counter is 0 I have to return
     cbz x2, .lExit
-    strb w1, [x0] 
+    strb w1, [x0]
     add x0, x0, #1
     sub x2, x2, #1
 

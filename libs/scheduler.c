@@ -74,7 +74,7 @@ void handle_timer_tick() {
 	// modificare kernel/kernel.c ogni volta che si cambia modalita'
 	// return;
 
-    uart_puts("[DEBUG] Handling timer tick\n");
+    // uart_puts("[DEBUG] Handling timer tick\n");
     current_process->counter -= 1;
     if (current_process->counter > 0 || current_process->preempt_disabled == 1) {
         return;

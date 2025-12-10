@@ -170,7 +170,7 @@ int sd_execute_command(unsigned int code, unsigned int arg)
     if(code&CMD_NEED_APP) {
         r=sd_execute_command(CMD_APP_CMD|(sd_rca?CMD_RSPNS_48:0),sd_rca);
         if(sd_rca && !r) {
-            uart_puts("ERROR: failed to send SD APP command\n"); 
+            uart_puts("ERROR: failed to send SD APP command\n");
             sd_err=SD_ERROR;
             return 0;
         }
@@ -430,14 +430,14 @@ void enable_card_detect() {
     r=*GPFSEL4;
     r&=~(7<<(7*3));
     *GPFSEL4=r;
-    
+
     *GPPUD=2;
     delay(150);
     *GPPUDCLK1=(1<<15);
     delay(150);
     *GPPUD=0;
     *GPPUDCLK1=0;
-    
+
     r=*GPHEN1;
     r|=1<<15;
     *GPHEN1=r;
@@ -496,8 +496,8 @@ long reset_emmc() {
 }
 
 int enable_card(int* ccs) {
-    long cnt = 6; 
-    long r = 0; 
+    long cnt = 6;
+    long r = 0;
     while (!(r&ACMD41_CMD_COMPLETE) && cnt--) {
         delay(400);
         r=sd_execute_command(CMD_SEND_OP_COND,ACMD41_ARG_HC);
@@ -529,7 +529,7 @@ int enable_card(int* ccs) {
         return SD_ERROR;
     }
     if (r & ACMD41_CMD_CCS) {
-        ccs=SCR_SUPP_CCS;
+        *ccs=SCR_SUPP_CCS;
     }
 
     return SD_OK;
