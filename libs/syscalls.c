@@ -61,4 +61,4 @@ int syscall_close_file(char* file_relative_path) {
     return 1;
 }
 
-void* const sys_call_table[] = {syscall_write, syscall_malloc, syscall_clone, syscall_exit};
+void* const sys_call_table[] = {syscall_write, syscall_malloc, syscall_clone, syscall_exit, syscall_create_dir, syscall_open_dir, syscall_open_file, syscall_close_file};

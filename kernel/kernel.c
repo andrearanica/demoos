@@ -37,56 +37,19 @@ void kernel_process() {
         uart_puts("[DEBUG] SD filesystem init error.\n");
     }
 
-    // int error = move_to_user_mode((unsigned long)&user_process);
-    // if (error < 0) {
-    //     uart_puts("[ERROR] Cannot move process from kernel mode to user mode\n");
-    // }
-}
-
-void process(int a) {
-	while(1) {
-		uart_puts("Sono il processo ");
-		uart_hex(a);
-		uart_puts("\n");
-		for (volatile unsigned long i = 0; i < 20000000; i++); // Simula lavoro}
-
-		// Necessario solo per SCHEDULING COOPERATIVO,
-		// modificare linea 74, libs/scheduler.c ogni volta che si cambia modalita'
-		//schedule();
-	}
+    int error = move_to_user_mode((unsigned long)&user_process);
+    if (error < 0) {
+        uart_puts("[ERROR] Cannot move process from kernel mode to user mode\n");
+    }
 }
 
 void user_process() {
-    call_syscall_write("User process started\n");
+    call_syscall_write("[DEBUG] User process started\n");
 
-    unsigned long stack = call_syscall_malloc();
-    if (stack < 0) {
-        uart_puts("[ERROR] Cannot allocate stack for process 1\n\r");
-        return;
+    int err = call_syscall_create_dir("temp");
+    if (err) {
+        call_syscall_write("[ERROR] Cannot create 'temp' dir.\n");
     }
-    call_syscall_write("[DEBUG] Allocated stack for process 1\n");
-
-
-    int error = call_syscall_clone((unsigned long)&user_process1, (unsigned long)"12345", stack);
-    if (error < 0) {
-        uart_puts("[ERROR] Cannot clone process 1\n\r");
-        return;
-    }
-    call_syscall_write("[DEBUG] Cloned process 1\n");
-
-    stack = call_syscall_malloc();
-    if (stack < 0) {
-        uart_puts("[ERROR] Cannot allocate stack for process 2\n\r");
-        return;
-    }
-    call_syscall_write("[DEBUG] Allocated stack for process 2\n");
-
-    error = call_syscall_clone((unsigned long)&user_process1, (unsigned long)"abcd", stack);
-    if (error < 0) {
-        uart_puts("[ERROR] Cannot clone process 2");
-        return;
-    }
-    call_syscall_write("[DEBUG] Cloned process 2\n");
 
     call_syscall_exit();
 }
