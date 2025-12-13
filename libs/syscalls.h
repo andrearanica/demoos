@@ -24,9 +24,9 @@ int syscall_fork();
 int syscall_create_dir(char* dir_relative_path);
 int syscall_open_dir(char* dir_relative_path);
 int syscall_open_file(char* file_relative_path, uint8_t flags);
-int syscall_close_file(char* file_relative_path);
-int syscall_write_file(char* file_relative_path, char* buffer, int len, int* bytes);
-int syscall_read_file(char* file_relative_path, char* buffer, int len, int* bytes);
+int syscall_close_file(int file_descriptor);
+int syscall_write_file(int file_descriptor, char* buffer, int len, int* bytes);
+int syscall_read_file(int file_descriptor, char* buffer, int len, int* bytes);
 
 void call_syscall_write(char* buffer);
 unsigned long call_syscall_malloc();
@@ -35,10 +35,10 @@ void call_syscall_exit();
 
 int call_syscall_create_dir(char* dir_relative_path);
 int call_syscall_open_dir(char* dir_relative_path);
-int call_syscall_open_file(char* file_relative_path, uint8_t flags);
-int call_syscall_close_file(char* file_relative_path);
-int call_syscall_write_file(char* file_relative_path, char* buffer, int len, int* bytes);
-int call_syscall_read_file(char* file_relative_path, char* buffer, int len, int* bytes);
+int call_syscall_open_file(int file_descriptor, uint8_t flags);
+int call_syscall_close_file(int file_descriptor);
+int call_syscall_write_file(int file_descriptor, char* buffer, int len, int* bytes);
+int call_syscall_read_file(int file_descriptor, char* buffer, int len, int* bytes);
 
 #endif
 #endif

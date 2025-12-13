@@ -26,7 +26,6 @@ void syscall_exit() {
     exit_process();
 }
 
-// Creates a dir in '/mnt/' and returns 0 if there are no errors
 int syscall_create_dir(char* dir_relative_path) {
     char complete_path[128];
     strcpy(complete_path, "/mnt/\0");
@@ -36,7 +35,6 @@ int syscall_create_dir(char* dir_relative_path) {
     return error;
 }
 
-// Opens a dir in '/mnt/' and returns 0 if there are no errors
 int syscall_open_dir(char* dir_relative_path) {
     char complete_path[128];
     strcpy(complete_path, "/mnt/\0");
@@ -46,32 +44,41 @@ int syscall_open_dir(char* dir_relative_path) {
     return error;
 }
 
-// Opens a file in '/mnt/' and returns 0 if there are no errors
 int syscall_open_file(char* file_relative_path, uint8_t flags) {
     char complete_path[128];
     strcpy(complete_path, "/mnt/\0");
     strcat(complete_path, file_relative_path);
 
-    int error = fat_file_open(&file, complete_path, flags);
+    int file_descriptor = -1;
+    for (int i = 0; i < MAX_FILES_PER_PROCESS; i++) {
+        if (current_process->files[i] == NULL) {
+            file_descriptor = i;
+            break;
+        }
+    }
+
+    File* file = (struct File*) get_free_page();
+    int error = fat_file_open(file, complete_path, flags);
+    current_process->files[file_descriptor] = file;
+    return file_descriptor;
+}
+
+int syscall_close_file(int file_descriptor) {
+    File* file = current_process->files[file_descriptor];
+    int error = fat_file_close(file);
     return error;
 }
 
-// Closes a file in '/mnt/' and returns 0 if there are no errors
-int syscall_close_file(char* file_relative_path) {
-    int error = fat_file_close(&file);
+int syscall_write_file(int file_descriptor, char* buffer, int len, int* bytes) {
+    File* file = current_process->files[file_descriptor];
+    int error = fat_file_write(file, buffer, len, bytes);
     return error;
 }
 
-// Writes a file in '/mnt/' and returns 0 if there are no errors
-int syscall_write_file(char* file_relative_path, char* buffer, int len, int* bytes) {
-    int error = fat_file_write(&file, buffer, len, bytes);
-    return error;
-}
-
-// Reads a file in '/mnt/' and returns 0 if there are no errors
-int syscall_read_file(char* file_relative_path, char* buffer, int len, int* bytes) {
-    fat_file_seek(&file, 0, FAT_SEEK_START);
-    int error = fat_file_read(&file, buffer, len, bytes);
+int syscall_read_file(int file_descriptor, char* buffer, int len, int* bytes) {
+    File* file = current_process->files[file_descriptor];
+    fat_file_seek(file, 0, FAT_SEEK_START);
+    int error = fat_file_read(file, buffer, len, bytes);
     return error;
 }
 
