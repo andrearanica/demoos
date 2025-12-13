@@ -21,6 +21,23 @@ sudo ln -s $(which aarch64-linux-gnu-ld) /usr/local/bin/aarch64-elf-ld
 sudo apt-get install qemu-system-arm
 ```
 
+Inoltre, per usare il filesystem è necessario creare un disco virtuale usando i seguenti comandi. 
+``` bash
+dd if=/dev/zero of=disk.img bs=1M count=64
+
+parted disk.img --script mklabel msdos
+
+parted disk.img --script mkpart primary fat32 1MiB 100%
+
+sudo losetup -fP disk.img
+
+lsblk # cerca il device in cui è stato montato il disco
+
+sudo mkfs.fat -F 32 /dev/loopXp1
+
+sudo losetup -d /dev/loopX
+```
+
 ## Compilazione ed Esecuzione
 
 ### Comandi principali

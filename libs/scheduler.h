@@ -9,6 +9,8 @@
 
 #define THREAD_SIZE 4096
 
+#define MAX_FILES_PER_PROCESS 16
+
 #define PF_KTHREAD 0x00000002	
 
 struct cpu_context {
@@ -27,6 +29,8 @@ struct cpu_context {
     unsigned long pc;
 };
 
+#include "./fat32/fat.h"
+
 struct PCB {
     struct cpu_context cpu_context;
     long state;
@@ -37,6 +41,8 @@ struct PCB {
 
     unsigned long stack;
     unsigned long flags;
+
+    File* files[16];
 };
 
 #define PROCESS_RUNNING 1
@@ -57,6 +63,8 @@ extern void schedule();
 extern void switch_to_process(struct PCB*);
 extern void handle_timer_tick();
 extern void exit_process();
+
+// 741fade
 
 #endif
 #endif

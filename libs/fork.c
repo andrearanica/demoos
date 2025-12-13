@@ -19,6 +19,7 @@ int fork(unsigned long clone_flags, unsigned long function, unsigned long argume
     struct pt_regs* child_registers = task_pt_regs(new_process);
     memzero((unsigned long)child_registers, sizeof(struct pt_regs));
     memzero((unsigned long)&new_process->cpu_context, sizeof(struct cpu_context));
+    memzero((unsigned long)&new_process->files, sizeof(new_process->files));
 
     if (clone_flags & PF_KTHREAD) {
         // If we are running a kernel thread, we only need to specify the function

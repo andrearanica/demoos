@@ -40,6 +40,7 @@ void enable_interrupt_controller(void)
 
 void show_invalid_entry_message(int type, unsigned long esr, unsigned long address)
 {
+    uart_puts("[KERNEL PANIC] ");
     uart_puts(entry_error_messages[type]);
     uart_puts(", ESR: ");
     uart_hex(esr);

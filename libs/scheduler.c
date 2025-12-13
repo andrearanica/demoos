@@ -1,5 +1,6 @@
 #include "scheduler.h"
 #include "cpu_switch.h"
+#include "allocator.h"
 #include "../drivers/irq/controller.h"
 #include "../drivers/uart/uart.h" // TODO remove, only for debug
 
@@ -36,7 +37,6 @@ void _schedule() {
             break;
         }
 
-        // uart_puts("[DEBUG] I can't find a process with more priority; increasing all\n");
         // If I didn't find any process, I increment the counter of each one
         for (int i = 0; i < N_PROCESSES; i++) {
             if (processes[i]) {
@@ -73,7 +73,7 @@ void handle_timer_tick() {
 	// modificare kernel/kernel.c ogni volta che si cambia modalita'
 	// return;
 
-    uart_puts("[DEBUG] Handling timer tick\n");
+    // uart_puts("[DEBUG] Handling timer tick\n");
     current_process->counter -= 1;
     if (current_process->counter > 0 || current_process->preempt_disabled == 1) {
         return;

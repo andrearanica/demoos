@@ -16,8 +16,12 @@
 
 #define PROCESS_SIZE 4096
 
+#include <stddef.h>
+
 unsigned long get_free_page();
 void free_page(unsigned long p);
 void memzero(unsigned long src, unsigned long n);
+int memcmp(const void* src1, const void* src2, size_t n);
+void memset(void* dest, int c, size_t count);
 
 #endif

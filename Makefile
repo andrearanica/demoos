@@ -4,11 +4,11 @@ LD := aarch64-elf-ld
 OBJCOPY := aarch64-elf-objcopy
 
 # Flags
-CFLAGS := -Wall -Wextra -O2 -ffreestanding -nostdlib -nostartfiles
+CFLAGS := -Wall -Wextra -O2 -ffreestanding -nostdlib -nostartfiles -mcpu=cortex-a53+nofp -mstrict-align
 LDFLAGS := -nostdlib
 
 # Sources
-C_SRCS := $(wildcard drivers/*/*.c kernel/*.c utils/*.c libs/*.c)
+C_SRCS := $(wildcard drivers/*/*.c kernel/*.c utils/*.c libs/*.c libs/fat32/fat.c)
 S_SRCS := $(wildcard drivers/*/*.S boot/*.S libs/*.S)
 PSF_SRCS := $(wildcard font/*.psf)
 
@@ -39,7 +39,7 @@ kernel8.elf: $(OBJS)
 	$(LD) -r -b binary -o $@ $<
 
 run:
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -drive file=test.dd,if=sd,format=raw -serial stdio
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -drive file=disk.img,if=sd,format=raw -serial stdio
 
 clean:
 	rm -f kernel8.elf kernel8.img $(OBJS)

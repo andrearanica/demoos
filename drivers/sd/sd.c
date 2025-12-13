@@ -1,154 +1,443 @@
-#include "sd.h"
-#include "../../libs/utils.h"
+/*
+ * Copyright (C) 2018 bzt (bztsrc@github)
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use, copy,
+ * modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
+ *
+ */
+
+#include "../../arch/gpio.h"
 #include "../uart/uart.h"
+#include "../../libs/utils.h"
+#include "sd.h"
+
+#include <stdint.h>
+
+#define EMMC_ARG2           ((volatile unsigned int*)(MMIO_BASE+0x00300000))
+#define EMMC_BLKSIZECNT     ((volatile unsigned int*)(MMIO_BASE+0x00300004))
+#define EMMC_ARG1           ((volatile unsigned int*)(MMIO_BASE+0x00300008))
+#define EMMC_CMDTM          ((volatile unsigned int*)(MMIO_BASE+0x0030000C))
+#define EMMC_RESP0          ((volatile unsigned int*)(MMIO_BASE+0x00300010))
+#define EMMC_RESP1          ((volatile unsigned int*)(MMIO_BASE+0x00300014))
+#define EMMC_RESP2          ((volatile unsigned int*)(MMIO_BASE+0x00300018))
+#define EMMC_RESP3          ((volatile unsigned int*)(MMIO_BASE+0x0030001C))
+#define EMMC_DATA           ((volatile unsigned int*)(MMIO_BASE+0x00300020))
+#define EMMC_STATUS         ((volatile unsigned int*)(MMIO_BASE+0x00300024))
+#define EMMC_CONTROL0       ((volatile unsigned int*)(MMIO_BASE+0x00300028))
+#define EMMC_CONTROL1       ((volatile unsigned int*)(MMIO_BASE+0x0030002C))
+#define EMMC_INTERRUPT      ((volatile unsigned int*)(MMIO_BASE+0x00300030))
+#define EMMC_INT_MASK       ((volatile unsigned int*)(MMIO_BASE+0x00300034))
+#define EMMC_INT_EN         ((volatile unsigned int*)(MMIO_BASE+0x00300038))
+#define EMMC_CONTROL2       ((volatile unsigned int*)(MMIO_BASE+0x0030003C))
+#define EMMC_SLOTISR_VER    ((volatile unsigned int*)(MMIO_BASE+0x003000FC))
+
+// command flags
+#define CMD_NEED_APP        0x80000000
+#define CMD_RSPNS_48        0x00020000
+#define CMD_ERRORS_MASK     0xfff9c004
+#define CMD_RCA_MASK        0xffff0000
+
+
+// COMMANDs
+#define CMD_GO_IDLE         0x00000000
+#define CMD_ALL_SEND_CID    0x02010000
+#define CMD_SEND_REL_ADDR   0x03020000
+#define CMD_CARD_SELECT     0x07030000
+#define CMD_SEND_IF_COND    0x08020000
+#define CMD_STOP_TRANS      0x0C030000
+#define CMD_READ_SINGLE     0x11220010
+#define CMD_READ_MULTI      0x12220032
+#define CMD_SET_BLOCKCNT    0x17020000
+#define CMD_WRITE_SINGLE    0x18220000
+#define CMD_WRITE_MULTI     0x19220022
+#define CMD_APP_CMD         0x37000000
+#define CMD_SET_BUS_WIDTH   (0x06020000|CMD_NEED_APP)
+#define CMD_SEND_OP_COND    (0x29020000|CMD_NEED_APP)
+#define CMD_SEND_SCR        (0x33220010|CMD_NEED_APP)
+
+// STATUS register settings
+#define SR_READ_AVAILABLE   0x00000800
+#define SR_WRITE_AVAILABLE  0x00000400
+#define SR_DAT_INHIBIT      0x00000002
+#define SR_CMD_INHIBIT      0x00000001
+#define SR_APP_CMD          0x00000020
+
+// INTERRUPT register settings
+#define INT_DATA_TIMEOUT    0x00100000
+#define INT_CMD_TIMEOUT     0x00010000
+#define INT_READ_RDY        0x00000020
+#define INT_WRITE_RDY       0x00000010
+#define INT_DATA_DONE       0x00000002
+#define INT_CMD_DONE        0x00000001
+
+#define INT_ERROR_MASK      0x017E8000
+
+// CONTROL register settings
+#define C0_SPI_MODE_EN      0x00100000
+#define C0_HCTL_HS_EN       0x00000004
+#define C0_HCTL_DWITDH      0x00000002
+
+#define C1_SRST_DATA        0x04000000
+#define C1_SRST_CMD         0x02000000
+#define C1_SRST_HC          0x01000000
+#define C1_TOUNIT_DIS       0x000f0000
+#define C1_TOUNIT_MAX       0x000e0000
+#define C1_CLK_GENSEL       0x00000020
+#define C1_CLK_EN           0x00000004
+#define C1_CLK_STABLE       0x00000002
+#define C1_CLK_INTLEN       0x00000001
+
+// SLOTISR_VER values
+#define HOST_SPEC_NUM       0x00ff0000
+#define HOST_SPEC_NUM_SHIFT 16
+#define HOST_SPEC_V3        2
+#define HOST_SPEC_V2        1
+#define HOST_SPEC_V1        0
+
+// SCR flags
+#define SCR_SD_BUS_WIDTH_4  0x00000400
+#define SCR_SUPP_SET_BLKCNT 0x02000000
+// added by my driver
+#define SCR_SUPP_CCS        0x00000001
+
+#define ACMD41_VOLTAGE      0x00ff8000
+#define ACMD41_CMD_COMPLETE 0x80000000
+#define ACMD41_CMD_CCS      0x40000000
+#define ACMD41_ARG_HC       0x51ff8000
+
+unsigned long sd_scr[2], sd_ocr, sd_rca, sd_err, sd_hv;
 
 void enable_card_detect();
 void enable_clock_and_command();
 void enable_data_pins();
-void reset_emmc();
-int sd_set_clock(unsigned int);
-int sd_execute_command(unsigned int, unsigned int);
-int sd_status(unsigned int);
-int sd_wait_for_interrupt(unsigned int);
-int sd_enable_card();
-long sd_get_rca();
+long reset_emmc();
+int enable_card();
 
-long sd_standard_version, ccs;
+void wait_msec(unsigned int n) {
+    uint32_t system_clock = *(volatile uint32_t*)SYS_TIMER_CLOCK;
+    uint32_t target = system_clock + n * 1000;
 
-unsigned long sd_scr[2], sd_rca, sd_error;
+    while ((int32_t)(*(volatile uint32_t*)SYS_TIMER_CLOCK - target) < 0);
+}
 
+/**
+ * Wait for data or command ready
+ */
+int sd_status(unsigned int mask)
+{
+    int cnt = 500000; while((*EMMC_STATUS & mask) && !(*EMMC_INTERRUPT & INT_ERROR_MASK) && cnt--) wait_msec(1);
+    return (cnt <= 0 || (*EMMC_INTERRUPT & INT_ERROR_MASK)) ? SD_ERROR : SD_OK;
+}
+
+/**
+ * Wait for interrupt
+ */
+int sd_int(unsigned int mask)
+{
+    unsigned int r, m=mask | INT_ERROR_MASK;
+    int cnt = 1000000; while(!(*EMMC_INTERRUPT & m) && cnt--) wait_msec(1);
+    r=*EMMC_INTERRUPT;
+    if(cnt<=0 || (r & INT_CMD_TIMEOUT) || (r & INT_DATA_TIMEOUT) ) { *EMMC_INTERRUPT=r; return SD_TIMEOUT; } else
+    if(r & INT_ERROR_MASK) { *EMMC_INTERRUPT=r; return SD_ERROR; }
+    *EMMC_INTERRUPT=mask;
+    return 0;
+}
+
+/**
+ * Send a command
+ */
+int sd_execute_command(unsigned int code, unsigned int arg)
+{
+    int r=0;
+    sd_err=SD_OK;
+    if(code&CMD_NEED_APP) {
+        r=sd_execute_command(CMD_APP_CMD|(sd_rca?CMD_RSPNS_48:0),sd_rca);
+        if(sd_rca && !r) {
+            uart_puts("ERROR: failed to send SD APP command\n");
+            sd_err=SD_ERROR;
+            return 0;
+        }
+        code &= ~CMD_NEED_APP;
+    }
+    if(sd_status(SR_CMD_INHIBIT)) { uart_puts("ERROR: EMMC busy\n"); sd_err= SD_TIMEOUT;return 0;}
+    // uart_puts("EMMC: Sending command ");uart_hex(code);uart_puts(" arg ");uart_hex(arg);uart_puts("\n");
+    *EMMC_INTERRUPT=*EMMC_INTERRUPT; *EMMC_ARG1=arg; *EMMC_CMDTM=code;
+    if(code==CMD_SEND_OP_COND) wait_msec(1000); else
+    if(code==CMD_SEND_IF_COND || code==CMD_APP_CMD) wait_msec(100);
+    if((r=sd_int(INT_CMD_DONE))) {uart_puts("ERROR: failed to send EMMC command\n");sd_err=r;return 0;}
+    r=*EMMC_RESP0;
+    if(code==CMD_GO_IDLE || code==CMD_APP_CMD) return 0; else
+    if(code==(CMD_APP_CMD|CMD_RSPNS_48)) return r&SR_APP_CMD; else
+    if(code==CMD_SEND_OP_COND) return r; else
+    if(code==CMD_SEND_IF_COND) return r==arg? SD_OK : SD_ERROR; else
+    if(code==CMD_ALL_SEND_CID) {r|=*EMMC_RESP3; r|=*EMMC_RESP2; r|=*EMMC_RESP1; return r; } else
+    if(code==CMD_SEND_REL_ADDR) {
+        sd_err=(((r&0x1fff))|((r&0x2000)<<6)|((r&0x4000)<<8)|((r&0x8000)<<8))&CMD_ERRORS_MASK;
+        return r&CMD_RCA_MASK;
+    }
+    return r&CMD_ERRORS_MASK;
+    // make gcc happy
+    return 0;
+}
+
+/**
+ * read a block from sd card and return the number of bytes read
+ * returns 0 on error.
+ */
+int sd_readblock(unsigned int lba, unsigned char *buffer, unsigned int num)
+{
+    int r,c=0,d;
+    if(num<1) num=1;
+    // uart_puts("sd_readblock lba ");uart_hex(lba);uart_puts(" num ");uart_hex(num);uart_puts("\n");
+    if(sd_status(SR_DAT_INHIBIT)) {sd_err=SD_TIMEOUT; return 0;}
+    unsigned int *buf=(unsigned int *)buffer;
+    if(sd_scr[0] & SCR_SUPP_CCS) {
+        if(num > 1 && (sd_scr[0] & SCR_SUPP_SET_BLKCNT)) {
+            sd_execute_command(CMD_SET_BLOCKCNT,num);
+            if(sd_err) return 0;
+        }
+        *EMMC_BLKSIZECNT = (num << 16) | 512;
+        sd_execute_command(num == 1 ? CMD_READ_SINGLE : CMD_READ_MULTI,lba);
+        if(sd_err) return 0;
+    } else {
+        *EMMC_BLKSIZECNT = (1 << 16) | 512;
+    }
+    while( c < num ) {
+        if(!(sd_scr[0] & SCR_SUPP_CCS)) {
+            sd_execute_command(CMD_READ_SINGLE,(lba+c)*512);
+            if(sd_err) return 0;
+        }
+        if((r=sd_int(INT_READ_RDY))){uart_puts("\rERROR: Timeout waiting for ready to read\n");sd_err=r;return 0;}
+        for(d=0;d<128;d++) buf[d] = *EMMC_DATA;
+        c++; buf+=128;
+    }
+    if( num > 1 && !(sd_scr[0] & SCR_SUPP_SET_BLKCNT) && (sd_scr[0] & SCR_SUPP_CCS)) sd_execute_command(CMD_STOP_TRANS,0);
+    return sd_err!=SD_OK || c!=num? 0 : num*512;
+}
+
+/**
+ * set SD clock to frequency in Hz
+ */
+int sd_set_clock(unsigned int f)
+{
+    unsigned int d,c=41666666/f,x,s=32,h=0;
+    int cnt = 100000;
+    while((*EMMC_STATUS & (SR_CMD_INHIBIT|SR_DAT_INHIBIT)) && cnt--) wait_msec(1);
+    if(cnt<=0) {
+        uart_puts("ERROR: timeout waiting for inhibit flag\n");
+        return SD_ERROR;
+    }
+
+    *EMMC_CONTROL1 &= ~C1_CLK_EN; wait_msec(10);
+    x=c-1; if(!x) s=0; else {
+        if(!(x & 0xffff0000u)) { x <<= 16; s -= 16; }
+        if(!(x & 0xff000000u)) { x <<= 8;  s -= 8; }
+        if(!(x & 0xf0000000u)) { x <<= 4;  s -= 4; }
+        if(!(x & 0xc0000000u)) { x <<= 2;  s -= 2; }
+        if(!(x & 0x80000000u)) { x <<= 1;  s -= 1; }
+        if(s>0) s--;
+        if(s>7) s=7;
+    }
+    if(sd_hv>HOST_SPEC_V2) d=c; else d=(1<<s);
+    if(d<=2) {d=2;s=0;}
+    // uart_puts("sd_set_clock divisor ");uart_hex(d);uart_puts(", shift ");uart_hex(s);uart_puts("\n");
+    if(sd_hv>HOST_SPEC_V2) h=(d&0x300)>>2;
+    d=(((d&0x0ff)<<8)|h);
+    *EMMC_CONTROL1=(*EMMC_CONTROL1&0xffff003f)|d; wait_msec(10);
+    *EMMC_CONTROL1 |= C1_CLK_EN; wait_msec(10);
+    cnt=10000; while(!(*EMMC_CONTROL1 & C1_CLK_STABLE) && cnt--) wait_msec(10);
+    if(cnt<=0) {
+        uart_puts("ERROR: failed to get stable clock\n");
+        return SD_ERROR;
+    }
+    return SD_OK;
+}
+
+/**
+ * write a block to the sd card and return the number of bytes written
+ * returns 0 on error.
+ */
+int sd_writeblock(unsigned char *buffer, unsigned int lba, unsigned int num)
+{
+    int r,c=0,d;
+    if(num<1) num=1;
+    // uart_puts("sd_writeblock lba ");uart_hex(lba);uart_puts(" num ");uart_hex(num);uart_puts("\n");
+    if(sd_status(SR_DAT_INHIBIT | SR_WRITE_AVAILABLE)) {sd_err=SD_TIMEOUT; return 0;}
+    unsigned int *buf=(unsigned int *)buffer;
+    if(sd_scr[0] & SCR_SUPP_CCS) {
+        if(num > 1 && (sd_scr[0] & SCR_SUPP_SET_BLKCNT)) {
+            sd_execute_command(CMD_SET_BLOCKCNT,num);
+            if(sd_err) return 0;
+        }
+        *EMMC_BLKSIZECNT = (num << 16) | 512;
+        sd_execute_command(num == 1 ? CMD_WRITE_SINGLE : CMD_WRITE_MULTI,lba);
+        if(sd_err) return 0;
+    } else {
+        *EMMC_BLKSIZECNT = (1 << 16) | 512;
+    }
+    while( c < num ) {
+        if(!(sd_scr[0] & SCR_SUPP_CCS)) {
+            sd_execute_command(CMD_WRITE_SINGLE,(lba+c)*512);
+            if(sd_err) return 0;
+        }
+        if((r=sd_int(INT_WRITE_RDY))){uart_puts("\rERROR: Timeout waiting for ready to write\n");sd_err=r;return 0;}
+        for(d=0;d<128;d++) *EMMC_DATA = buf[d];
+        c++; buf+=128;
+    }
+    if((r=sd_int(INT_DATA_DONE))){uart_puts("\rERROR: Timeout waiting for data done\n");sd_err=r;return 0;}
+    if( num > 1 && !(sd_scr[0] & SCR_SUPP_SET_BLKCNT) && (sd_scr[0] & SCR_SUPP_CCS)) sd_execute_command(CMD_STOP_TRANS,0);
+    return sd_err!=SD_OK || c!=num? 0 : num*512;
+}
+
+/**
+ * Initialize EMMC to read SDHC card
+ */
 int sd_init() {
+    long r, cnt, ccs=0;
+
     enable_card_detect();
     enable_clock_and_command();
     enable_data_pins();
 
-    sd_standard_version = (*EMMC_SLOTISR_VER & HOST_SPEC_NUM) >> HOST_SPEC_NUM_SHIFT;
+    sd_hv = (*EMMC_SLOTISR_VER & HOST_SPEC_NUM) >> HOST_SPEC_NUM_SHIFT;
 
-    reset_emmc();
+    // Reset the card
+    cnt = reset_emmc();
+    if(cnt <= 0) {
+        uart_puts("[ERROR] Failed to reset EMMC\n");
+        return SD_ERROR;
+    }
+    // uart_puts("[DEBUG] EMMC reset OK\n");
 
     *EMMC_CONTROL1 |= C1_CLK_INTLEN | C1_TOUNIT_MAX;
     wait_msec(10);
 
-    if (sd_set_clock(400000) == SD_ERROR) {
-        return SD_ERROR;
+    // Set clock to setup frequency
+    if ((r = sd_set_clock(400000))){
+        return r;
     }
 
     // I enable the EMMC interrupts
-    *EMMC_INT_EN = 0xFFFFFFFF;
-    *EMMC_INT_MASK = 0xFFFFFFFF;
+    *EMMC_INT_EN   = 0xffffffff;
+    *EMMC_INT_MASK = 0xffffffff;
 
-    sd_scr[0] = sd_scr[1] = sd_rca = sd_error = 0;
-
-    // I execute the following two commands because this is how the DS
-    // standard works
+    sd_scr[0] = sd_scr[1] = sd_rca = sd_err = 0;
 
     sd_execute_command(CMD_GO_IDLE, 0);
-    if (sd_error) {
-        return sd_error;
+    if (sd_err) {
+        return sd_err;
     }
 
-    sd_execute_command(CMD_SEND_IF_COND, 0x1AA);
-    if (sd_error) {
-        return sd_error;
+    sd_execute_command(CMD_SEND_IF_COND, 0x000001AA);
+    if (sd_err) {
+        return sd_err;
     }
 
-    int enable_result = sd_enable_card();
-    if (enable_result == SD_ERROR) {
-        return SD_ERROR;
+    int enable_card_ok = enable_card(&ccs);
+    if (enable_card_ok != SD_OK) {
+        return enable_card_ok;
     }
 
-    // Asks the SD for its Card Identificator
     sd_execute_command(CMD_ALL_SEND_CID, 0);
 
-    // Then the SD generates a Relative Card Address
-    long sd_rca = sd_execute_command(CMD_SEND_REL_ADDR, 0);
-    uart_hex(sd_rca >> 32);
-    uart_hex(sd_rca);
-    uart_puts("\n");
-    if (sd_error) {
-        return sd_error;
+    sd_rca = sd_execute_command(CMD_SEND_REL_ADDR, 0);
+    // uart_puts("EMMC: CMD_SEND_REL_ADDR returned "); uart_hex(sd_rca >> 32); uart_hex(sd_rca); uart_puts("\n");
+    if(sd_err) {
+        return sd_err;
     }
 
-    long response;
-    if ((response = sd_set_clock(25000000))) {
-        return response;
+    if((r = sd_set_clock(25000000))) {
+        return r;
     }
 
-    // Then I select the SD using its RCA
     sd_execute_command(CMD_CARD_SELECT, sd_rca);
-    if (sd_error) {
-        return sd_error;
+    if (sd_err) {
+        return sd_err;
     }
 
     if (sd_status(SR_DAT_INHIBIT)) {
         return SD_TIMEOUT;
     }
 
-    // This registers tells the CPU to read 1 block of 8 bytes
     *EMMC_BLKSIZECNT = (1 << 16) | 8;
     sd_execute_command(CMD_SEND_SCR, 0);
-    if (sd_error) {
-        return sd_error;
+    if (sd_err) {
+        return sd_err;
     }
-
-    if (sd_wait_for_interrupt(INT_READ_RDY)) {
+    if (sd_int(INT_READ_RDY)) {
         return SD_TIMEOUT;
     }
 
-    // I read 2 words from EMMC_DATA to sd_scr
-    response = 0;
-    long counter = 100000;
-    while (response < 2 && counter) {
+    r=0;
+    cnt=100000;
+    while(r < 2 && cnt) {
         if (*EMMC_STATUS & SR_READ_AVAILABLE) {
-            sd_scr[response++] = *EMMC_DATA;
-        } else {
+            sd_scr[r++] = *EMMC_DATA;
+        }
+        else {
             wait_msec(1);
         }
     }
-
-    if (response != 2) {
+    if (r != 2) {
         return SD_TIMEOUT;
     }
-
     if (sd_scr[0] & SCR_SD_BUS_WIDTH_4) {
-        sd_execute_command(CMD_SET_BUS_WIDTH, sd_rca | 2);
-        if (sd_error) {
-            return sd_error;
+        sd_execute_command(CMD_SET_BUS_WIDTH, sd_rca|2);
+        if (sd_err) {
+            return sd_err;
         }
-        *EMMC_CONTROL0 |= C0_HCTL_DWIDTH;
+        *EMMC_CONTROL0 |= C0_HCTL_DWITDH;
     }
 
+    // add software flag
+    /*uart_puts("EMMC: supports ");
+    if(sd_scr[0] & SCR_SUPP_SET_BLKCNT) {
+        uart_puts("SET_BLKCNT ");
+    }
+    if(ccs) {
+        uart_puts("CCS ");
+    }
+    uart_puts("\n");*/
     sd_scr[0] &= ~SCR_SUPP_CCS;
     sd_scr[0] |= ccs;
-
     return SD_OK;
 }
 
 void enable_card_detect() {
-    // First, I set the GPIO 47 (card detect) pin to input (000). The GPIO47 is inside
-    // group 4 (40-49) in position 7 and each position is 3 bit: GPFSEL4 + 7 * 3
-    long r = *GPFSEL4;
-    r &= ~(7 << (7 * 3));
-    *GPFSEL4 = r;
+    long r, cnt, ccs=0;
 
-    // Then I pullup the value of the pin to high to avoid unstable state
-    // The GPPUD is the register which stores which type of pull to perform (up or down)
-    // I have to write this register to perform a pullup which value is two
-    *GPPUD = 2;
-    delay(150);
-    // Then I need to write which PIN should have the pullup; GPPUDCLK1 controls GPIO fr
-    // from 32 to 53, so the offset for the GPIO 47 is 15
-    *GPPUDCLK1 = (1 << 15);
-    delay(150);
-    // Then the pullup is applied and I reset the registers
-    *GPPUD = 0;
-    *GPPUDCLK1 = 0;
+    // GPIO_CD
+    r=*GPFSEL4;
+    r&=~(7<<(7*3));
+    *GPFSEL4=r;
 
-    // The register GPHEN1 saves which PINS (from 21 to 53) will generate an interrupt
-    // if their value is maintained to 1; I have to write the GPIO 47
-    r = *GPHEN1;
-    r |= 1 << 15;
-    *GPHEN1 = r;
+    *GPPUD=2;
+    delay(150);
+    *GPPUDCLK1=(1<<15);
+    delay(150);
+    *GPPUD=0;
+    *GPPUDCLK1=0;
+
+    r=*GPHEN1;
+    r|=1<<15;
+    *GPHEN1=r;
 }
 
 void enable_clock_and_command() {
@@ -190,238 +479,55 @@ void enable_data_pins() {
     *GPPUDCLK1 = 0;
 }
 
-void reset_emmc() {
-    // I have to reset all the bits of the controller
+long reset_emmc() {
+    // Reset the card
     *EMMC_CONTROL0 = 0;
     *EMMC_CONTROL1 |= C1_SRST_HC;
 
-    // The raspberry hardware should put the EMMC_CONTROL1 to 0 after a while;
-    // so I wait this to happen
-    // IMPORTANT: qemu is not implementing the EMMC controller, so the CONTROL1
-    // bit will never be written
-    // To confirm this thesis, execute the following code:
-    /*
-    *EMMC_CONTROL1 = 0x20;
-    uart_hex(*EMMC_CONTROL1); // Prints 0x20
-    uart_puts("\n");
-
-    *EMMC_CONTROL1 = 0x01000000;
-    uart_hex(*EMMC_CONTROL1); // Prints 0
-    uart_puts("\n");
-    */
-    // Maybe the bit reset is really fast but this is really sus
-
-    while (*EMMC_CONTROL1 & C1_SRST_HC) {
-    }
-}
-
-int sd_set_clock(unsigned int frequency) {
-    int counter = 100000;
-
-    // Busy wait until EMMC inhibit flags are removed
-    while (*EMMC_STATUS & (SR_CMD_INHIBIT | SR_DAT_INHIBIT)) {
-        counter--;
-        wait_msec(1);
-
-        if (counter <= 0) {
-            return SD_ERROR;
-        }
-    }
-
-    *EMMC_CONTROL1 &= ~C1_CLK_EN;
-    wait_msec(10);
-
-    unsigned int clock = 41666666 / frequency;
-    unsigned int x, s = 32;
-
-    x = clock - 1;
-    if (!x) {
-        s = 0;
-    } else {
-        if (!(x & 0xffff0000u)) { x <<= 16; s -= 16; }
-        if (!(x & 0xff000000u)) { x <<= 8;  s -= 8; }
-        if (!(x & 0xf0000000u)) { x <<= 4;  s -= 4; }
-        if (!(x & 0xc0000000u)) { x <<= 2;  s -= 2; }
-        if (!(x & 0x80000000u)) { x <<= 1;  s -= 1; }
-        if (s > 0) { s--; }
-        if (s > 7) { s = 7; }
-    }
-
-    unsigned int d;
-    if (sd_standard_version > HOST_SPEC_V2) {
-        d = clock;
-    } else {
-        d = (1 << s);
-    }
-
-    if (d <= 2) {
-        d = 2;
-        s = 0;
-    }
-
-    unsigned int h = 0;
-    if (sd_standard_version > HOST_SPEC_V2) {
-        h = (d & 0x300) >> 2;
-    }
-    d = (((d & 0x0FF) << 8) | h);
-
-    *EMMC_CONTROL1 = (*EMMC_CONTROL1 & 0xffff003f) | d;
-    wait_msec(10);
-
-    counter = 10000;
-    while (!(*EMMC_CONTROL1 & C1_CLK_STABLE)) {
+    long cnt = 10000;
+    do{
         wait_msec(10);
-        counter--;
+    } while((*EMMC_CONTROL1 & C1_SRST_HC) && cnt--);
 
-        if (counter <= 0) {
-            return SD_ERROR;
-        }
-    }
-
-    return SD_OK;
+    return cnt;
 }
 
-int sd_execute_command(unsigned int code, unsigned int arg) {
-    int response = 0;
-    sd_error = SD_OK;
-
-    // If the code is application specific, first I need to send an APP command
-    if (code & CMD_NEED_APP) {
-        response = sd_execute_command(CMD_APP_CMD | sd_rca ? CMD_RSPNS_48 : 0, sd_rca);
-        if (sd_rca && !response) {
-            sd_error = SD_ERROR;
-            return SD_ERROR;
-        }
-        code &= ~CMD_NEED_APP;
-    }
-
-    if (sd_status(SR_CMD_INHIBIT)) {
-        uart_puts("[ERROR] EMMC is inhibit\n");
-    }
-
-    /*
-    uart_puts("[DEBUG] Sending command ");
-    uart_hex(code);
-    uart_puts(" with arg ");
-    uart_hex(arg);
-    uart_puts("to EMMC\n");
-    */
-
-    *EMMC_INTERRUPT = *EMMC_INTERRUPT;
-    *EMMC_ARG1 = arg;
-    *EMMC_CMDTM = code;
-
-    if (code == CMD_SEND_OP_COND) {
-        wait_msec(1000);
-    } else if (code == CMD_SEND_IF_COND || code == CMD_APP_CMD) {
-        wait_msec(100);
-    }
-
-    if ((response = sd_wait_for_interrupt(INT_CMD_DONE))) {
-        // uart_puts("[ERROR] Failed to send EMMC command\n");
-        sd_error = response;
-        return -1;
-    }
-
-    response = *EMMC_RESP0;
-    if (code == CMD_GO_IDLE || code == CMD_APP_CMD) {
-        return 0;
-    } else if (code == (CMD_APP_CMD | CMD_RSPNS_48)) {
-        return response & SR_APP_CMD;
-    } else if (code == CMD_SEND_OP_COND) {
-        return response;
-    } else if (code == CMD_SEND_IF_COND) {
-        return response == arg ? SD_OK : SD_ERROR;
-    } else if (code == CMD_ALL_SEND_CID) {
-        response |= *EMMC_RESP3;
-        response |= *EMMC_RESP2;
-        response |= *EMMC_RESP1;
-        return response;
-    } else if (code == CMD_SEND_REL_ADDR) {
-        sd_error = (((response & 0x1fff))|((response & 0x2000)<<6)|((response & 0x4000)<<8)|((response & 0x8000)<<8)) & CMD_ERRORS_MASK;
-        return response & CMD_RCA_MASK;
-    }
-
-    return response & CMD_ERRORS_MASK;
-}
-
-int sd_status(unsigned int mask) {
-    int counter = 500000;
-    while ((*EMMC_STATUS & mask) && !(*EMMC_INTERRUPT & INT_ERROR_MASK)) {
-        counter--;
-        wait_msec(1);
-    }
-
-    return (counter <= 0 || (*EMMC_INTERRUPT & INT_ERROR_MASK)) ? SD_ERROR : SD_OK;
-}
-
-int sd_wait_for_interrupt(unsigned int mask) {
-    unsigned int response, m = mask | INT_ERROR_MASK;
-    int counter = 10; // TODO make this 100000 when we'll have EMMC
-    while (!(*EMMC_INTERRUPT & m) && counter--) {
-        wait_msec(1);
-    }
-
-    response = *EMMC_INTERRUPT;
-    if (counter <= 0 || (response & INT_CMD_TIMEOUT) || (response & INT_DATA_TIMEOUT)) {
-        *EMMC_INTERRUPT = response;
-        return SD_ERROR;
-    } else if (response & INT_ERROR_MASK) {
-        *EMMC_INTERRUPT = mask;
-        return SD_ERROR;
-    }
-
-    *EMMC_INTERRUPT = mask;
-    return 0;
-}
-
-int sd_enable_card() {
-    long counter = 6, response = 0;
-    while (!(response & ACMD41_CMD_COMPLETE) && counter--) {
+int enable_card(int* ccs) {
+    long cnt = 6;
+    long r = 0;
+    while (!(r&ACMD41_CMD_COMPLETE) && cnt--) {
         delay(400);
-        // This commands tells the SD to start the powerup
-        response = sd_execute_command(CMD_SEND_OP_COND, ACMD41_ARG_HC);
-        uart_puts("[DEBUG] EMMC executed CMD_SEND_OP_COND and returned ");
-        // This bit tells if the SD power-up is completed
-        if (response & ACMD41_CMD_COMPLETE) {
+        r=sd_execute_command(CMD_SEND_OP_COND,ACMD41_ARG_HC);
+        /*uart_puts("EMMC: CMD_SEND_OP_COND returned ");
+        if (r & ACMD41_CMD_COMPLETE) {
             uart_puts("COMPLETE ");
         }
-        // This bit tells if the 3.3v tension is supported
-        if (response & ACMD41_VOLTAGE) {
+        if (r & ACMD41_VOLTAGE) {
             uart_puts("VOLTAGE ");
         }
-        // This bit is 1 if the card capacity is enabled
-        if (response & ACMD41_CMD_CCS) {
-            uart_puts("CSS ");
+        if(r & ACMD41_CMD_CCS) {
+            uart_puts("CCS ");
         }
-        uart_hex(response >> 32);
-        uart_hex(response);
-        uart_puts("\n");
 
-        if (sd_error != SD_TIMEOUT && sd_error != SD_OK) {
-            uart_puts("[ERROR] EMMC ACMD41 returned error\n");
-            return SD_ERROR;
+        uart_hex(r >> 32);
+        uart_hex(r);
+        uart_puts("\n");*/
+
+        if(sd_err != SD_TIMEOUT && sd_err != SD_OK) {
+            uart_puts("ERROR: EMMC ACMD41 returned error\n");
+            return sd_err;
         }
     }
 
-    if (!(response & ACMD41_CMD_COMPLETE) || !counter) {
+    if (!(r & ACMD41_CMD_COMPLETE) || !cnt ){
+        return SD_TIMEOUT;
+    }
+    if (!(r & ACMD41_VOLTAGE)) {
         return SD_ERROR;
     }
-    if (!(response & ACMD41_VOLTAGE)) {
-        return SD_ERROR;
-    }
-    ccs = 0;
-    if (!(response & ACMD41_CMD_CCS)) {
-        ccs = SCR_SUPP_CCS;
+    if (r & ACMD41_CMD_CCS) {
+        *ccs=SCR_SUPP_CCS;
     }
 
     return SD_OK;
-}
-
-// TODO move from here to util
-void wait_msec(unsigned int n) {
-    uint32_t system_clock = *(volatile uint32_t*)SYS_TIMER_CLOCK;
-    uint32_t target = system_clock + n * 1000;
-
-    while ((int32_t)(*(volatile uint32_t*)SYS_TIMER_CLOCK - target) < 0);
 }

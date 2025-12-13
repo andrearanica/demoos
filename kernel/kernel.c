@@ -8,10 +8,12 @@
 #include "../drivers/timer/timer.h"
 #include "../drivers/irq/controller.h"
 #include "../drivers/sd/sd.h"
+#include "../drivers/sd/sd_filesystem.h"
 
 void kernel_process();
 void user_process();
-void user_process1(char*);
+void user_process_fs();
+void user_process_print();
 
 void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3)
 {
@@ -23,87 +25,77 @@ void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3)
     enable_interrupt_controller();
     enable_irq();
 
-    // int res = fork(PF_KTHREAD, (unsigned long)&kernel_process, 0, 0);
+    int fs_ok = sd_filesystem_init();
+    if (fs_ok == SD_FILESYSTEM_INIT_OK) {
+        uart_puts("[DEBUG] SD filesystem init successful.\n");
+    } else {
+        uart_puts("[DEBUG] SD filesystem init error.\n");
+    }
 
-    sd_init();
-
-	// Non serve piu', lo switch dei processi e' ora deciso dal timer
-    /*while (1) {
-        schedule();
-    }*/
-
-	// Necessario solo per SCHEDULING COOPERATIVO,
-	// Forza l'esecuzione del primo processo
-	// modificare linea 74, libs/scheduler.c ogni volta che si cambia modalita'
-	//schedule();
-
+    int res = fork(PF_KTHREAD, (unsigned long)&kernel_process, 0, 0);
 }
 
 void kernel_process() {
-    uart_puts("Kernel process started\n");
+    uart_puts("Kernel process started.\n");
 
     int error = move_to_user_mode((unsigned long)&user_process);
     if (error < 0) {
         uart_puts("[ERROR] Cannot move process from kernel mode to user mode\n");
     }
-
-}
-
-void process(int a) {
-	while(1) {
-		uart_puts("Sono il processo ");
-		uart_hex(a);
-		uart_puts("\n");
-		for (volatile unsigned long i = 0; i < 20000000; i++); // Simula lavoro}
-		
-		// Necessario solo per SCHEDULING COOPERATIVO,
-		// modificare linea 74, libs/scheduler.c ogni volta che si cambia modalita'
-		//schedule();
-	}
 }
 
 void user_process() {
-    call_syscall_write("User process started\n");
+    call_syscall_write("[DEBUG] User process started.\n");
 
-    unsigned long stack = call_syscall_malloc();
-    if (stack < 0) {
-        uart_puts("[ERROR] Cannot allocate stack for process 1\n\r");
-        return;
+    unsigned long stack_1 = call_syscall_malloc();
+    if (stack_1 < 0) {
+        call_syscall_write("[ERROR] Cannot allocate stack for process 1.\n");
     }
-    call_syscall_write("[DEBUG] Allocated stack for process 1\n");
+    call_syscall_clone(&user_process_print, "1", stack_1);
 
-
-    int error = call_syscall_clone((unsigned long)&user_process1, (unsigned long)"12345", stack);
-    if (error < 0) {
-        uart_puts("[ERROR] Cannot clone process 1\n\r");
-        return;
+    unsigned long stack_2 = call_syscall_malloc();
+    if (stack_1 < 0) {
+        call_syscall_write("[ERROR] Cannot allocate stack for process 1.\n");
     }
-    call_syscall_write("[DEBUG] Cloned process 1\n");
-
-    stack = call_syscall_malloc();
-    if (stack < 0) {
-        uart_puts("[ERROR] Cannot allocate stack for process 2\n\r");
-        return;
-    }
-    call_syscall_write("[DEBUG] Allocated stack for process 2\n");
-
-    error = call_syscall_clone((unsigned long)&user_process1, (unsigned long)"abcd", stack);
-    if (error < 0) {
-        uart_puts("[ERROR] Cannot clone process 2");
-        return;
-    }
-    call_syscall_write("[DEBUG] Cloned process 2\n");
+    call_syscall_clone(&user_process_print, "2", stack_2);
 
     call_syscall_exit();
 }
 
-void user_process1(char* array) {
-    char buffer[2] = {0};
+void user_process_fs() {
+    int error;
+    int fd = call_syscall_open_file("prova.txt", FAT_READ | FAT_WRITE | FAT_CREATE);
+    if (fd == -1) {
+        call_syscall_write("[ERROR] Cannot open file 'prova.txt'.\n");
+        call_syscall_exit();
+    }
+
+    int* cnt;
+
+    error = call_syscall_write_file(fd, "ciao! sono il primo processo e ho scritto sul file", 51, cnt);
+    if (error) {
+        call_syscall_write("[DEBUG] Cannot write on file 'prova.txt'.\n");
+    } else {
+        call_syscall_write("[DEBUG] File 'prova.txt' written.\n");
+    }
+
+    char buffer[51];
+    error = call_syscall_read_file(fd, buffer, 51, cnt);
+    if (error) {
+        call_syscall_write("[ERROR] Cannot read file 'prova.txt'.\n");
+    } else {
+        call_syscall_write("[DEBUG] File read: the content is '");
+        call_syscall_write(buffer);
+        call_syscall_write("'\n");
+    }
+
+    call_syscall_close_file(fd);
+}
+
+void user_process_print(char* process_name) {
     while (1) {
-        for (int i = 0; i < 5; i++) {
-            buffer[0] = array[i];
-            call_syscall_write(buffer);
-            delay(100000);
-        }
+        call_syscall_write("Processo ");
+        call_syscall_write(process_name);
+        call_syscall_write("\n");
     }
 }
