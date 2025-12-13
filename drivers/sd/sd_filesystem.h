@@ -6,7 +6,7 @@
 
 #include "../../libs/fat32/fat.h"
 
-static Fat fat;
+static Fat g_fat;
 static Dir dir;
 
 int sd_filesystem_init();

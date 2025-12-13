@@ -37,7 +37,6 @@ void _schedule() {
             break;
         }
 
-        // uart_puts("[DEBUG] I can't find a process with more priority; increasing all\n");
         // If I didn't find any process, I increment the counter of each one
         for (int i = 0; i < N_PROCESSES; i++) {
             if (processes[i]) {

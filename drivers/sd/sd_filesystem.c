@@ -33,7 +33,7 @@ int sd_filesystem_init() {
         return SD_FILESYSTEM_INIT_ERROR;
     }
 
-    int mount_error = fat_mount(&disk_operations, 0, &fat, "mnt");
+    int mount_error = fat_mount(&disk_operations, 0, &g_fat, "mnt");
     if (mount_error) {
         uart_puts("[ERROR] Cannot mount filesystem.\n");
         return SD_FILESYSTEM_INIT_ERROR;

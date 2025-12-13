@@ -59,6 +59,11 @@ int syscall_open_file(char* file_relative_path, uint8_t flags) {
 
     File* file = (struct File*) get_free_page();
     int error = fat_file_open(file, complete_path, flags);
+
+    if (error) {
+        return -1;
+    }
+
     current_process->files[file_descriptor] = file;
     return file_descriptor;
 }

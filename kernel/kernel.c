@@ -12,7 +12,8 @@
 
 void kernel_process();
 void user_process();
-void user_process1(char*);
+void user_process_fs();
+void user_process_print();
 
 void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3)
 {
@@ -44,58 +45,57 @@ void kernel_process() {
 }
 
 void user_process() {
-    call_syscall_write("[DEBUG] User process started\n");
+    call_syscall_write("[DEBUG] User process started.\n");
 
-    char buffer[40];
-    int* cnt;
-
-    int err = call_syscall_create_dir("user_dir");
-    if (err) {
-        call_syscall_write("[ERROR] Cannot create 'user_dir'.\n");
-    } else {
-        call_syscall_write("[DEBUG] Dir 'user_dir' created.\n");
+    unsigned long stack_1 = call_syscall_malloc();
+    if (stack_1 < 0) {
+        call_syscall_write("[ERROR] Cannot allocate stack for process 1.\n");
     }
+    call_syscall_clone(&user_process_print, "1", stack_1);
 
-    int fd = call_syscall_open_file("user_dir/user_file.txt", FAT_CREATE | FAT_WRITE | FAT_READ | FAT_TRUNC);
-    if (fd == -1) {
-        call_syscall_write("[ERROR] Cannot open 'user_file.txt'.\n");
-    } else {
-        call_syscall_write("[DEBUG] Open 'user_file.txt'\n");
+    unsigned long stack_2 = call_syscall_malloc();
+    if (stack_1 < 0) {
+        call_syscall_write("[ERROR] Cannot allocate stack for process 1.\n");
     }
-
-    err = call_syscall_write_file(fd, "ciao12345678", 13, cnt);
-    if (err) {
-        call_syscall_write("[ERROR] Cannot write 'user_file.txt'.\n");
-    } else {
-        call_syscall_write("[DEBUG] Written 'user_file.txt'.\n");
-    }
-
-    err = call_syscall_read_file(fd, buffer, 13, cnt);
-    if (err) {
-        call_syscall_write("[ERROR] Cannot read 'user_file.txt'.\n");
-    } else {
-        call_syscall_write("[DEBUG] File read successfully. The content is: '");
-        call_syscall_write(buffer);
-        call_syscall_write("'\n");
-    }
-
-    err = call_syscall_close_file(fd);
-    if (err) {
-        call_syscall_write("[ERROR] Cannot write 'user_file.txt'.\n");
-    } else {
-        call_syscall_write("[DEBUG] Closed 'user_file.txt'.\n");
-    }
+    call_syscall_clone(&user_process_print, "2", stack_2);
 
     call_syscall_exit();
 }
 
-void user_process1(char* array) {
-    char buffer[2] = {0};
+void user_process_fs() {
+    int error;
+    int fd = call_syscall_open_file("prova.txt", FAT_READ | FAT_WRITE | FAT_CREATE);
+    if (fd == -1) {
+        call_syscall_write("[ERROR] Cannot open file 'prova.txt'.\n");
+        call_syscall_exit();
+    }
+
+    int* cnt;
+
+    error = call_syscall_write_file(fd, "ciao! sono il primo processo e ho scritto sul file", 51, cnt);
+    if (error) {
+        call_syscall_write("[DEBUG] Cannot write on file 'prova.txt'.\n");
+    } else {
+        call_syscall_write("[DEBUG] File 'prova.txt' written.\n");
+    }
+
+    char buffer[51];
+    error = call_syscall_read_file(fd, buffer, 51, cnt);
+    if (error) {
+        call_syscall_write("[ERROR] Cannot read file 'prova.txt'.\n");
+    } else {
+        call_syscall_write("[DEBUG] File read: the content is '");
+        call_syscall_write(buffer);
+        call_syscall_write("'\n");
+    }
+
+    call_syscall_close_file(fd);
+}
+
+void user_process_print(char* process_name) {
     while (1) {
-        for (int i = 0; i < 5; i++) {
-            buffer[0] = array[i];
-            call_syscall_write(buffer);
-            delay(100000);
-        }
+        call_syscall_write("Processo ");
+        call_syscall_write(process_name);
+        call_syscall_write("\n");
     }
 }

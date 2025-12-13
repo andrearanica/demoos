@@ -257,7 +257,7 @@ int sd_set_clock(unsigned int f)
     }
     if(sd_hv>HOST_SPEC_V2) d=c; else d=(1<<s);
     if(d<=2) {d=2;s=0;}
-    uart_puts("sd_set_clock divisor ");uart_hex(d);uart_puts(", shift ");uart_hex(s);uart_puts("\n");
+    // uart_puts("sd_set_clock divisor ");uart_hex(d);uart_puts(", shift ");uart_hex(s);uart_puts("\n");
     if(sd_hv>HOST_SPEC_V2) h=(d&0x300)>>2;
     d=(((d&0x0ff)<<8)|h);
     *EMMC_CONTROL1=(*EMMC_CONTROL1&0xffff003f)|d; wait_msec(10);
@@ -324,7 +324,7 @@ int sd_init() {
         uart_puts("[ERROR] Failed to reset EMMC\n");
         return SD_ERROR;
     }
-    uart_puts("[ERROR] EMMC reset OK\n");
+    // uart_puts("[DEBUG] EMMC reset OK\n");
 
     *EMMC_CONTROL1 |= C1_CLK_INTLEN | C1_TOUNIT_MAX;
     wait_msec(10);
@@ -358,10 +358,7 @@ int sd_init() {
     sd_execute_command(CMD_ALL_SEND_CID, 0);
 
     sd_rca = sd_execute_command(CMD_SEND_REL_ADDR, 0);
-    uart_puts("EMMC: CMD_SEND_REL_ADDR returned ");
-    uart_hex(sd_rca >> 32);
-    uart_hex(sd_rca);
-    uart_puts("\n");
+    // uart_puts("EMMC: CMD_SEND_REL_ADDR returned "); uart_hex(sd_rca >> 32); uart_hex(sd_rca); uart_puts("\n");
     if(sd_err) {
         return sd_err;
     }
@@ -410,14 +407,14 @@ int sd_init() {
     }
 
     // add software flag
-    uart_puts("EMMC: supports ");
+    /*uart_puts("EMMC: supports ");
     if(sd_scr[0] & SCR_SUPP_SET_BLKCNT) {
         uart_puts("SET_BLKCNT ");
     }
     if(ccs) {
         uart_puts("CCS ");
     }
-    uart_puts("\n");
+    uart_puts("\n");*/
     sd_scr[0] &= ~SCR_SUPP_CCS;
     sd_scr[0] |= ccs;
     return SD_OK;
@@ -501,7 +498,7 @@ int enable_card(int* ccs) {
     while (!(r&ACMD41_CMD_COMPLETE) && cnt--) {
         delay(400);
         r=sd_execute_command(CMD_SEND_OP_COND,ACMD41_ARG_HC);
-        uart_puts("EMMC: CMD_SEND_OP_COND returned ");
+        /*uart_puts("EMMC: CMD_SEND_OP_COND returned ");
         if (r & ACMD41_CMD_COMPLETE) {
             uart_puts("COMPLETE ");
         }
@@ -514,7 +511,7 @@ int enable_card(int* ccs) {
 
         uart_hex(r >> 32);
         uart_hex(r);
-        uart_puts("\n");
+        uart_puts("\n");*/
 
         if(sd_err != SD_TIMEOUT && sd_err != SD_OK) {
             uart_puts("ERROR: EMMC ACMD41 returned error\n");
