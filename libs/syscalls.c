@@ -87,4 +87,8 @@ int syscall_read_file(int file_descriptor, char* buffer, int len, int* bytes) {
     return error;
 }
 
-void* const sys_call_table[] = {syscall_write, syscall_malloc, syscall_clone, syscall_exit, syscall_create_dir, syscall_open_dir, syscall_open_file, syscall_close_file, syscall_write_file, syscall_read_file};
+void syscall_yield() {
+    schedule();
+}
+
+void* const sys_call_table[] = {syscall_write, syscall_malloc, syscall_clone, syscall_exit, syscall_create_dir, syscall_open_dir, syscall_open_file, syscall_close_file, syscall_write_file, syscall_read_file, syscall_yield};

@@ -97,5 +97,6 @@ void user_process_print(char* process_name) {
         call_syscall_write("Processo ");
         call_syscall_write(process_name);
         call_syscall_write("\n");
+        call_syscall_yield();
     }
 }

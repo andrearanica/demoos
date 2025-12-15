@@ -1,7 +1,7 @@
 #ifndef __SYSCALLS_H
 #define __SYSCALLS_H
 
-#define __NR_SYSCALLS 10
+#define __NR_SYSCALLS 11
 
 // Each system call is defined by a number used by the assembly
 #define SYSCALL_WRITE_NUMBER        0
@@ -14,6 +14,7 @@
 #define SYSCALL_CLOSE_FILE_NUMBER   7
 #define SYSCALL_WRITE_FILE_NUMBER   8
 #define SYSCALL_READ_FILE_NUMBER    9
+#define SYSCALL_YIELD_NUMBER       10
 
 #ifndef __ASSEMBLER__
 
@@ -27,6 +28,7 @@ int syscall_open_file(char* file_relative_path, uint8_t flags);
 int syscall_close_file(int file_descriptor);
 int syscall_write_file(int file_descriptor, char* buffer, int len, int* bytes);
 int syscall_read_file(int file_descriptor, char* buffer, int len, int* bytes);
+void syscall_yield();
 
 void call_syscall_write(char* buffer);
 unsigned long call_syscall_malloc();
@@ -39,6 +41,8 @@ int call_syscall_open_file(int file_descriptor, uint8_t flags);
 int call_syscall_close_file(int file_descriptor);
 int call_syscall_write_file(int file_descriptor, char* buffer, int len, int* bytes);
 int call_syscall_read_file(int file_descriptor, char* buffer, int len, int* bytes);
+
+void call_syscall_yield();
 
 #endif
 #endif

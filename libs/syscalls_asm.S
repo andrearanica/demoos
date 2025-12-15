@@ -74,6 +74,12 @@ call_syscall_read_file:
     svc #0
     ret
 
+.globl call_syscall_yield
+call_syscall_yield:
+    mov w8, #SYSCALL_YIELD_NUMBER
+    svc #0
+    ret
+
 thread_start:
     mov x29, 0
     mov x0, x11
