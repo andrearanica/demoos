@@ -72,6 +72,7 @@ int syscall_open_dir(char* dir_relative_path) {
         return -1;
     }
 
+    current_process->files[file_descriptor] = (FatResource*) get_free_page();
     current_process->files[file_descriptor]->resource_type = RESOURCE_TYPE_FOLDER;
     current_process->files[file_descriptor]->d = dir;
 
@@ -171,7 +172,6 @@ int syscall_get_next_entry(int file_descriptor, FatEntryInfo *entry_info) {
     FatResource* fat_resource = current_process->files[file_descriptor];
     Dir* dir = fat_resource->d;
 
-    uart_hex((unsigned long)dir); uart_puts("\n");
     DirInfo dir_info;
     int error = fat_dir_read(dir, &dir_info);
 
@@ -187,7 +187,6 @@ int syscall_get_next_entry(int file_descriptor, FatEntryInfo *entry_info) {
 
     error = fat_dir_next(dir);
     if (error) {
-        fat_dir_rewind(dir);
         return -1;
     }
 

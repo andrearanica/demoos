@@ -15,7 +15,6 @@
 void kernel_process();
 void user_process();
 void user_process_fs();
-void user_process_print(char* process_name);
 void shell();
 
 void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3)
@@ -48,7 +47,7 @@ void kernel_process() {
 }
 
 void shell() {
-    char current_path[40] = "/\0";
+    char working_directory[40] = "/\0";
     call_syscall_write("[SHELL] Welcome to the shell!\n");
     while (1) {
         call_syscall_write("> ");
@@ -58,19 +57,22 @@ void shell() {
 
         if (memcmp(buffer, "help", 4) == 0) {
             call_syscall_write("[demoos shell - 0.0.1]\n");
+            call_syscall_write("Available commands:\n");
+            call_syscall_write("  help       - Show this help message\n");
+            call_syscall_write("  pwd        - Show the current working directory\n");
+            call_syscall_write("  ls         - Show content of the current folder\n");
+            call_syscall_write("  mkdir      - Create a directory in the working directory\n");
         } else if (memcmp(buffer, "ls", 2) == 0) {
-            int fd = syscall_open_dir(current_path);
+            int fd = syscall_open_dir(working_directory);
             if (fd == -1) {
                 call_syscall_write("[SHELL] Error opening folder '");
                 call_syscall_write(buffer);
                 call_syscall_write("'.\n");
             }
-            call_syscall_write("[SHELL] Folder open with FD '");
-            uart_hex(fd);
-            call_syscall_write("'.\n");
 
             FatEntryInfo* info;
             while (1) {
+                memset(info->name, 0, 64);
                 int result = call_syscall_get_next_entry(fd, info);
                 if (result != 1) {
                     break;
@@ -85,69 +87,28 @@ void shell() {
                 call_syscall_write("\n");
             }
         } else if (memcmp(buffer, "pwd", 3) == 0) {
-            call_syscall_write(current_path);
+            call_syscall_write(working_directory);
             call_syscall_write("\n");
+        } else if (memcmp(buffer, "mkdir", 5) == 0) {
+            char command[30];
+            char dir_name[30];
+            strsplit(buffer, ' ', command, dir_name);
         } else {
             call_syscall_write("[SHELL] Command '");
             call_syscall_write(buffer);
             call_syscall_write("' not found.\n");
         }
     }
-}
-
-void user_process() {
-    call_syscall_write("[DEBUG] User process started.\n");
-
-    unsigned long stack_1 = call_syscall_malloc();
-    if (stack_1 < 0) {
-        call_syscall_write("[ERROR] Cannot allocate stack for process 1.\n");
-    }
-    call_syscall_clone((unsigned long)&user_process_print, (unsigned long)"1", stack_1);
-
-    unsigned long stack_2 = call_syscall_malloc();
-    if (stack_1 < 0) {
-        call_syscall_write("[ERROR] Cannot allocate stack for process 1.\n");
-    }
-    call_syscall_clone((unsigned long)&user_process_print, (unsigned long)"2", stack_2);
 
     call_syscall_exit();
 }
 
 void user_process_fs() {
-    int error;
-    int fd = call_syscall_open_file("prova.txt", FAT_READ | FAT_WRITE | FAT_CREATE);
-    if (fd == -1) {
-        call_syscall_write("[ERROR] Cannot open file 'prova.txt'.\n");
-        call_syscall_exit();
-    }
-
-    int* cnt;
-
-    error = call_syscall_write_file(fd, "ciao! sono il primo processo e ho scritto sul file", 51, cnt);
+    int error = call_syscall_create_dir("cartella");
     if (error) {
-        call_syscall_write("[DEBUG] Cannot write on file 'prova.txt'.\n");
+        uart_puts("[ERROR] Cannot create 'cartella' dir\n");
     } else {
-        call_syscall_write("[DEBUG] File 'prova.txt' written.\n");
+        uart_puts("[DEBUG] Directory 'cartella' created\n");
     }
-
-    char buffer[51];
-    error = call_syscall_read_file(fd, buffer, 51, cnt);
-    if (error) {
-        call_syscall_write("[ERROR] Cannot read file 'prova.txt'.\n");
-    } else {
-        call_syscall_write("[DEBUG] File read: the content is '");
-        call_syscall_write(buffer);
-        call_syscall_write("'\n");
-    }
-
-    call_syscall_close_file(fd);
-}
-
-void user_process_print(char* process_name) {
-    while (1) {
-        char buffer[8] = {0};
-        call_syscall_input(buffer, 8);
-        uart_puts("[P"); uart_puts(process_name); uart_puts("] Hello '"); uart_puts(buffer); uart_puts("'\n");
-        call_syscall_yield();
-    }
+    call_syscall_exit();
 }
