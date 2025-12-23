@@ -20,12 +20,15 @@ void shell();
 void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3)
 {
     uart_init();
-    uart_puts("Hello, kernel world!\r\n");
-
-    irq_vector_init();
-    timer_init();
-    enable_interrupt_controller();
-    enable_irq();
+	uart_puts("demoOS v.0.0.0\n");
+	irq_vector_init();
+	uart_puts("[DONE] irq vector init\n");
+	timer_init();
+	uart_puts("[DONE] timer init\n");
+	enable_interrupt_controller();
+	uart_puts("[DONE] enable interrupt controller\n");
+	enable_irq();
+	uart_puts("[DONE] enable irq\n");
 
     int fs_ok = sd_filesystem_init();
     if (fs_ok == SD_FILESYSTEM_INIT_OK) {

@@ -1,4 +1,5 @@
 #include "scheduler.h"
+#include "allocator.h"
 #include "cpu_switch.h"
 #include "allocator.h"
 #include "../drivers/irq/controller.h"
