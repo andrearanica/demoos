@@ -155,14 +155,23 @@ int syscall_input(char* buffer, int len) {
             uart_tail = (uart_tail + 1) % UART_BUFFER_SIZE;
 
             if (c == '\r' || c == '\n') {
+                // Se il carattere è invio, termino di occupare il buffer
                 uart_owner = NULL;
                 return current_len;
-            }
-
-            if (current_len < len) {
-                *buffer = c;
-                buffer++;
-                current_len++;
+            } else if (c == 0x7F) {
+                // Se il carattere è backspace, cancello l'ultimo carattere scritto
+                if (current_len > 0) {
+                    uart_puts("\b \b");
+                    *buffer = 0;
+                    buffer--;
+                    current_len--;
+                }
+            } else {
+                if (current_len < len) {
+                    *buffer = c;
+                    buffer++;
+                    current_len++;
+                }
             }
         }
     }
