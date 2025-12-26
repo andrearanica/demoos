@@ -64,6 +64,7 @@ void shell() {
     char buffer[64];
     memset(buffer, 0, 64);
 
+    // FIXME shell explodes when writing 64 characters
     call_syscall_input(buffer, 64);
     call_syscall_write("\n");
 
@@ -141,14 +142,13 @@ void handle_mkdir(char* buffer, char* working_directory) {
 
     char temp[64];
     memset(temp, 0, 64);
-    memcpy(temp, working_directory, 64);
     strcat(temp, working_directory);
     strcat(temp, dir_name);
 
-    int fd = syscall_create_dir(dir_name);
+    int fd = syscall_create_dir(temp);
         if (fd == -1) {
         call_syscall_write("[SHELL] Cannot create '");
-        call_syscall_write(dir_name);
+        call_syscall_write(temp);
         call_syscall_write("'.\n");
     }
 }
@@ -159,35 +159,29 @@ void handle_cd(char* buffer, char* working_directory) {
 
     strsplit(buffer, ' ', command, destination_dir);
 
-    if (memcmp(destination_dir, "/", 64) == 0) {
-        call_syscall_write("[SHELL] Error: cannot go outside root folder '/'\n");
-        return;
-    }
-
     char temp[64];
     memset(temp, 0, 64);
-    if (memcmp(destination_dir, "./", 2) == 0) {
-        int i = 0;
+    if (memcmp(destination_dir, ".", 1) == 0) {
+        if (memcmp(destination_dir, "./", 2) == 0) {
+            int i = 0;
 
-        int c = 2;
-        while (c != 0) {
-            destination_dir[i] = destination_dir[i+1];
-            i++;
+            int c = 2;
+            while (c != 0) {
+                destination_dir[i] = destination_dir[i + 1];
+                i++;
 
-            if (destination_dir[i] == '\0') {
-                i = 0;
-                c--;
+                if (destination_dir[i] == '\0') {
+                    i = 0;
+                    c--;
+                }
             }
         }
-
-        call_syscall_write("[DEBUG] Clean dir: ");
-        call_syscall_write(destination_dir);
-        call_syscall_write("\n");
 
         memcpy(temp, working_directory, 64);
     }
 
     strcat(temp, destination_dir);
+    strcat(temp, "/");
 
     if (call_syscall_open_dir(temp) == -1) {
         call_syscall_write("[SHELL] Error: cannot change directory to '");
