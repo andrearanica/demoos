@@ -117,8 +117,12 @@ void handle_uart_irq(void) {
         uart_puts("\r\n");
       } else {
         char c = (char)(dr & 0xFF);
-        uart_buffer[uart_head] = c;
-        uart_head = (uart_head + 1) % UART_BUFFER_SIZE;
+
+        int next_head = (uart_head + 1) % UART_BUFFER_SIZE;
+        if (next_head != uart_tail) {
+          uart_buffer[uart_head] = c;
+          uart_head = next_head;
+        }
 
         // FIXME remove this debug output
         /*
