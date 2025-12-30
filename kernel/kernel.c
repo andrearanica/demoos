@@ -173,6 +173,14 @@ void handle_cd(char* buffer, char* working_directory) {
     char temp[64];
     memset(temp, 0, 64);
 
+    int destination_dir_len = 0;
+    while (destination_dir_len < 64) {
+      if (destination_dir[destination_dir_len] == '/0' || destination_dir[destination_dir_len] == 0) {
+        break;
+      }
+      destination_dir_len++;
+    }
+
     if (memcmp(destination_dir, "./", 2) == 0) {
         // Rimuovo "./" dalla cartella di destinazione e aggiungo la working dir
         int i = 0;
@@ -190,7 +198,9 @@ void handle_cd(char* buffer, char* working_directory) {
         memcpy(temp, working_directory, 64);
 
         strcat(temp, destination_dir);
-        strcat(temp, "/");
+        if (destination_dir[destination_dir_len - 1] != '/') {
+          strcat(temp, "/");
+        }
     } else if (memcmp(destination_dir, "..", 2) == 0) {
       int slashes_positions[64] = {0};
       int n_slashes = 0;
@@ -210,7 +220,9 @@ void handle_cd(char* buffer, char* working_directory) {
         strcat(temp, "/");
         strcat(temp, destination_dir);
       }
-      strcat(temp, "/");
+      if (destination_dir[destination_dir_len - 1] != '/') {
+        strcat(temp, "/");
+      }
     }
 
     if (call_syscall_open_dir(temp) == -1) {
