@@ -11,6 +11,14 @@
 #include <stdint.h>
 #include <string.h>
 
+#define UART_NORMAL_COLOR  "\x1B[0m"
+#define UART_RED_COLOR  "\x1B[31m"
+#define UART_GREEN_COLOR  "\x1B[32m"
+#define UART_YELLOW_COLOR  "\x1B[33m"
+#define UART_BLUE_COLOR  "\x1B[34m"
+#define UART_WHITE_COLOR  "\x1B[37m"
+#define UART_CLEAR_SCREEN "\e[1;1H\e[2J"
+
 void kernel_process();
 void user_process();
 void user_process_fs();
@@ -45,8 +53,6 @@ void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3) {
 }
 
 void kernel_process() {
-  uart_puts("Kernel process started.\n");
-
   int error = move_to_user_mode((unsigned long)&shell);
   if (error < 0) {
     uart_puts("[ERROR] Cannot move process from kernel mode to user mode\n");
@@ -55,10 +61,12 @@ void kernel_process() {
 
 void shell() {
   char working_directory[64] = "/\0";
-  call_syscall_write("[SHELL] Welcome to the shell!\n");
   while (1) {
+    call_syscall_write(UART_GREEN_COLOR);
     call_syscall_write("demoos:");
+    call_syscall_write(UART_BLUE_COLOR);
     call_syscall_write(working_directory);
+    call_syscall_write(UART_WHITE_COLOR);
     call_syscall_write("$ ");
 
     char buffer[64];
@@ -78,6 +86,8 @@ void shell() {
       handle_mkdir(buffer, working_directory);
     } else if (memcmp(buffer, "cd", 2) == 0) {
       handle_cd(buffer, working_directory);
+    } else if (memcmp(buffer, "clear", 5) == 0) {
+      call_syscall_write(UART_CLEAR_SCREEN);
     } else {
       call_syscall_write("[SHELL] Command '");
       call_syscall_write(buffer);
@@ -95,6 +105,7 @@ void handle_help(char* buffer) {
     call_syscall_write("  pwd        - Show the current working directory\n");
     call_syscall_write("  ls         - Show content of the current folder\n");
     call_syscall_write("  mkdir      - Create a directory in the working directory\n");
+    call_syscall_write("  clear      - Clears the screen\n");
 }
 
 void handle_ls(char* buffer, char* working_directory) {
@@ -161,27 +172,46 @@ void handle_cd(char* buffer, char* working_directory) {
 
     char temp[64];
     memset(temp, 0, 64);
-    if (memcmp(destination_dir, ".", 1) == 0) {
-        if (memcmp(destination_dir, "./", 2) == 0) {
-            int i = 0;
 
-            int c = 2;
-            while (c != 0) {
-                destination_dir[i] = destination_dir[i + 1];
-                i++;
+    if (memcmp(destination_dir, "./", 2) == 0) {
+        // Rimuovo "./" dalla cartella di destinazione e aggiungo la working dir
+        int i = 0;
 
-                if (destination_dir[i] == '\0') {
-                    i = 0;
-                    c--;
-                }
+        int c = 2;
+        while (c != 0) {
+            destination_dir[i] = destination_dir[i + 1];
+            i++;
+
+            if (destination_dir[i] == '\0') {
+                i = 0;
+                c--;
             }
         }
-
         memcpy(temp, working_directory, 64);
-    }
 
-    strcat(temp, destination_dir);
-    strcat(temp, "/");
+        strcat(temp, destination_dir);
+        strcat(temp, "/");
+    } else if (memcmp(destination_dir, "..", 2) == 0) {
+      int slashes_positions[64] = {0};
+      int n_slashes = 0;
+      for (int i = 0; i < 64; i++) {
+        if (working_directory[i] == '/') {
+          slashes_positions[n_slashes] = i;
+          n_slashes++;
+        }
+      }
+
+      int last_slash_position = slashes_positions[n_slashes - 2];
+      for (int i = 0; i <= last_slash_position; i++) {
+        temp[i] = working_directory[i];
+      }
+    } else {
+      if (destination_dir[0] != "/") {
+        strcat(temp, "/");
+        strcat(temp, destination_dir);
+      }
+      strcat(temp, "/");
+    }
 
     if (call_syscall_open_dir(temp) == -1) {
         call_syscall_write("[SHELL] Error: cannot change directory to '");
