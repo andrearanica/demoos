@@ -124,18 +124,6 @@ void handle_uart_irq(void) {
           uart_head = next_head;
         }
 
-        // FIXME remove this debug output
-        /*
-        uart_puts("[DEBUG] Buffer UART letto da IRQ: [");
-        for (int i = 0; i < UART_BUFFER_SIZE; i++) {
-                uart_putc(uart_buffer[i]);
-                if (i < UART_BUFFER_SIZE) {
-                        uart_putc('|');
-                }
-        }
-        uart_puts("]\n");
-        */
-
         for (int i = 0; i < n_processes; i++) {
           if (processes[i]->state == PROCESS_WAITING_UART_INPUT) {
             processes[i]->state = PROCESS_RUNNING;

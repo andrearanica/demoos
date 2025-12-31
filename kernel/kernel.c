@@ -11,10 +11,21 @@
 #include <stdint.h>
 #include <string.h>
 
+#define UART_NORMAL_COLOR  "\x1B[0m"
+#define UART_RED_COLOR  "\x1B[31m"
+#define UART_GREEN_COLOR  "\x1B[32m"
+#define UART_YELLOW_COLOR  "\x1B[33m"
+#define UART_BLUE_COLOR  "\x1B[34m"
+#define UART_WHITE_COLOR  "\x1B[37m"
+#define UART_CLEAR_SCREEN "\e[1;1H\e[2J"
+
+#define MAX_PATH  64
+
 void kernel_process();
 void user_process();
 void user_process_fs();
 void shell();
+void normalize_path();
 
 void handle_help(char* buffer);
 void handle_ls(char* buffer, char* working_directory);
@@ -45,8 +56,6 @@ void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3) {
 }
 
 void kernel_process() {
-  uart_puts("Kernel process started.\n");
-
   int error = move_to_user_mode((unsigned long)&shell);
   if (error < 0) {
     uart_puts("[ERROR] Cannot move process from kernel mode to user mode\n");
@@ -55,10 +64,12 @@ void kernel_process() {
 
 void shell() {
   char working_directory[64] = "/\0";
-  call_syscall_write("[SHELL] Welcome to the shell!\n");
   while (1) {
+    call_syscall_write(UART_GREEN_COLOR);
     call_syscall_write("demoos:");
+    call_syscall_write(UART_BLUE_COLOR);
     call_syscall_write(working_directory);
+    call_syscall_write(UART_WHITE_COLOR);
     call_syscall_write("$ ");
 
     char buffer[64];
@@ -78,6 +89,8 @@ void shell() {
       handle_mkdir(buffer, working_directory);
     } else if (memcmp(buffer, "cd", 2) == 0) {
       handle_cd(buffer, working_directory);
+    } else if (memcmp(buffer, "clear", 5) == 0) {
+      call_syscall_write(UART_CLEAR_SCREEN);
     } else {
       call_syscall_write("[SHELL] Command '");
       call_syscall_write(buffer);
@@ -95,6 +108,7 @@ void handle_help(char* buffer) {
     call_syscall_write("  pwd        - Show the current working directory\n");
     call_syscall_write("  ls         - Show content of the current folder\n");
     call_syscall_write("  mkdir      - Create a directory in the working directory\n");
+    call_syscall_write("  clear      - Clears the screen\n");
 }
 
 void handle_ls(char* buffer, char* working_directory) {
@@ -143,6 +157,9 @@ void handle_mkdir(char* buffer, char* working_directory) {
     char temp[64];
     memset(temp, 0, 64);
     strcat(temp, working_directory);
+    if (dir_name[0] != '/') {
+      strcat(temp, "/");
+    }
     strcat(temp, dir_name);
 
     int fd = syscall_create_dir(temp);
@@ -155,33 +172,27 @@ void handle_mkdir(char* buffer, char* working_directory) {
 
 void handle_cd(char* buffer, char* working_directory) {
     char command[32] = {0};
-    char destination_dir[32] = {0};
+    char destination[32] = {0};
+    char temp[MAX_PATH] = {0};
 
-    strsplit(buffer, ' ', command, destination_dir);
+    strsplit(buffer, ' ', command, destination);
 
-    char temp[64];
-    memset(temp, 0, 64);
-    if (memcmp(destination_dir, ".", 1) == 0) {
-        if (memcmp(destination_dir, "./", 2) == 0) {
-            int i = 0;
+    if (destination[0] == '/') {
+      // If the path is absolute I don't need to use working directory
+      memcpy(temp, destination, MAX_PATH);
+    } else {
+      // If the path is relative, I append the working directory
+      memcpy(temp, working_directory, MAX_PATH);
+      int len = strlen(temp);
 
-            int c = 2;
-            while (c != 0) {
-                destination_dir[i] = destination_dir[i + 1];
-                i++;
-
-                if (destination_dir[i] == '\0') {
-                    i = 0;
-                    c--;
-                }
-            }
-        }
-
-        memcpy(temp, working_directory, 64);
+      if (len > 2 && temp[len - 1] != '/') {
+        temp[len] = '/';
+        temp[len + 1] = '\0';
+      }
+      strcat(temp, destination);
     }
 
-    strcat(temp, destination_dir);
-    strcat(temp, "/");
+    normalize_path(temp);
 
     if (call_syscall_open_dir(temp) == -1) {
         call_syscall_write("[SHELL] Error: cannot change directory to '");
@@ -190,6 +201,36 @@ void handle_cd(char* buffer, char* working_directory) {
         return;
     }
 
-    memcpy(working_directory, temp, 64);
+    memcpy(working_directory, temp, MAX_PATH);
 }
 
+void normalize_path(char* path) {
+  int read = 0, write = 0;
+
+  while (path[read] != '\0') {
+    if (path[read] == '.' && (path[read+1] == '/' || path[read+1] == '\0')) {
+      // I skip the "./" because it's useless to build the path
+      read += (path[read+1] == '/') ? 2 : 1;
+      continue;
+    } else if (path[read] == '.' && path[read+1] == '.' && (path[read+2] == '/' || path[read+2] == '\0')) {
+      read += (path[read+2] == '/') ? 3 : 2;
+
+      write--;
+      while (write > 0 && path[write - 1] != '/') {
+        write--;
+      }
+
+      continue;
+    }
+
+    path[write] = path[read];
+    write++;
+    read++;
+  }
+
+  path[write] = '\0';
+  if (write == 0) {
+    path[write] = '/';
+    path[write+1] = '\0';
+  }
+}
