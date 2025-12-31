@@ -19,10 +19,13 @@
 #define UART_WHITE_COLOR  "\x1B[37m"
 #define UART_CLEAR_SCREEN "\e[1;1H\e[2J"
 
+#define MAX_PATH  64
+
 void kernel_process();
 void user_process();
 void user_process_fs();
 void shell();
+void normalize_path();
 
 void handle_help(char* buffer);
 void handle_ls(char* buffer, char* working_directory);
@@ -154,6 +157,9 @@ void handle_mkdir(char* buffer, char* working_directory) {
     char temp[64];
     memset(temp, 0, 64);
     strcat(temp, working_directory);
+    if (dir_name[0] != '/') {
+      strcat(temp, "/");
+    }
     strcat(temp, dir_name);
 
     int fd = syscall_create_dir(temp);
@@ -166,64 +172,27 @@ void handle_mkdir(char* buffer, char* working_directory) {
 
 void handle_cd(char* buffer, char* working_directory) {
     char command[32] = {0};
-    char destination_dir[32] = {0};
+    char destination[32] = {0};
+    char temp[MAX_PATH] = {0};
 
-    strsplit(buffer, ' ', command, destination_dir);
+    strsplit(buffer, ' ', command, destination);
 
-    char temp[64];
-    memset(temp, 0, 64);
-
-    int destination_dir_len = 0;
-    while (destination_dir_len < 64) {
-      if (destination_dir[destination_dir_len] == '/0' || destination_dir[destination_dir_len] == 0) {
-        break;
-      }
-      destination_dir_len++;
-    }
-
-    if (memcmp(destination_dir, "./", 2) == 0) {
-        // Rimuovo "./" dalla cartella di destinazione e aggiungo la working dir
-        int i = 0;
-
-        int c = 2;
-        while (c != 0) {
-            destination_dir[i] = destination_dir[i + 1];
-            i++;
-
-            if (destination_dir[i] == '\0') {
-                i = 0;
-                c--;
-            }
-        }
-        memcpy(temp, working_directory, 64);
-
-        strcat(temp, destination_dir);
-        if (destination_dir[destination_dir_len - 1] != '/') {
-          strcat(temp, "/");
-        }
-    } else if (memcmp(destination_dir, "..", 2) == 0) {
-      int slashes_positions[64] = {0};
-      int n_slashes = 0;
-      for (int i = 0; i < 64; i++) {
-        if (working_directory[i] == '/') {
-          slashes_positions[n_slashes] = i;
-          n_slashes++;
-        }
-      }
-
-      int last_slash_position = slashes_positions[n_slashes - 2];
-      for (int i = 0; i <= last_slash_position; i++) {
-        temp[i] = working_directory[i];
-      }
+    if (destination[0] == '/') {
+      // If the path is absolute I don't need to use working directory
+      memcpy(temp, destination, MAX_PATH);
     } else {
-      if (destination_dir[0] != "/") {
-        strcat(temp, "/");
-        strcat(temp, destination_dir);
+      // If the path is relative, I append the working directory
+      memcpy(temp, working_directory, MAX_PATH);
+      int len = strlen(temp);
+
+      if (len > 2 && temp[len - 1] != '/') {
+        temp[len] = '/';
+        temp[len + 1] = '\0';
       }
-      if (destination_dir[destination_dir_len - 1] != '/') {
-        strcat(temp, "/");
-      }
+      strcat(temp, destination);
     }
+
+    normalize_path(temp);
 
     if (call_syscall_open_dir(temp) == -1) {
         call_syscall_write("[SHELL] Error: cannot change directory to '");
@@ -232,6 +201,36 @@ void handle_cd(char* buffer, char* working_directory) {
         return;
     }
 
-    memcpy(working_directory, temp, 64);
+    memcpy(working_directory, temp, MAX_PATH);
 }
 
+void normalize_path(char* path) {
+  int read = 0, write = 0;
+
+  while (path[read] != '\0') {
+    if (path[read] == '.' && (path[read+1] == '/' || path[read+1] == '\0')) {
+      // I skip the "./" because it's useless to build the path
+      read += (path[read+1] == '/') ? 2 : 1;
+      continue;
+    } else if (path[read] == '.' && path[read+1] == '.' && (path[read+2] == '/' || path[read+2] == '\0')) {
+      read += (path[read+2] == '/') ? 3 : 2;
+
+      write--;
+      while (write > 0 && path[write - 1] != '/') {
+        write--;
+      }
+
+      continue;
+    }
+
+    path[write] = path[read];
+    write++;
+    read++;
+  }
+
+  path[write] = '\0';
+  if (write == 0) {
+    path[write] = '/';
+    path[write+1] = '\0';
+  }
+}
