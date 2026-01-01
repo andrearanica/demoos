@@ -32,6 +32,8 @@ void handle_ls(char* buffer, char* working_directory);
 void handle_pwd(char* working_directory);
 void handle_mkdir(char* buffer, char* working_directory);
 void handle_cd(char* buffer, char* working_directory);
+void handle_write(char* buffer, char* working_directory);
+void handle_show(char* buffer, char* working_directory);
 
 void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3) {
   uart_init();
@@ -75,7 +77,6 @@ void shell() {
     char buffer[64];
     memset(buffer, 0, 64);
 
-    // FIXME shell explodes when writing 64 characters
     call_syscall_input(buffer, 64);
     call_syscall_write("\n");
 
@@ -91,6 +92,10 @@ void shell() {
       handle_cd(buffer, working_directory);
     } else if (memcmp(buffer, "clear", 5) == 0) {
       call_syscall_write(UART_CLEAR_SCREEN);
+    } else if (memcmp(buffer, "write", 5) == 0) {
+      handle_write(buffer, working_directory);
+    } else if (memcmp(buffer, "show", 4) == 0) {
+      handle_show(buffer, working_directory);
     } else {
       call_syscall_write("[SHELL] Command '");
       call_syscall_write(buffer);
@@ -108,6 +113,8 @@ void handle_help(char* buffer) {
     call_syscall_write("  pwd        - Show the current working directory\n");
     call_syscall_write("  ls         - Show content of the current folder\n");
     call_syscall_write("  mkdir      - Create a directory in the working directory\n");
+    call_syscall_write("  write      - Creates a file and writes the given content in it\n");
+    call_syscall_write("  show       - Shows the content of the given file\n");
     call_syscall_write("  clear      - Clears the screen\n");
 }
 
@@ -128,7 +135,7 @@ void handle_ls(char* buffer, char* working_directory) {
         }
 
         if (info->is_dir) {
-            call_syscall_write("\x1b[34m ");
+            call_syscall_write("\x1b[34m");
             call_syscall_write(info->name);
             call_syscall_write("\x1b[0m");
         } else {
@@ -177,6 +184,11 @@ void handle_cd(char* buffer, char* working_directory) {
 
     strsplit(buffer, ' ', command, destination);
 
+    int destination_len = strlen(destination);
+    if (destination[destination_len - 1] != '/') {
+      strcat(destination, "/");
+    }
+
     if (destination[0] == '/') {
       // If the path is absolute I don't need to use working directory
       memcpy(temp, destination, MAX_PATH);
@@ -202,6 +214,54 @@ void handle_cd(char* buffer, char* working_directory) {
     }
 
     memcpy(working_directory, temp, MAX_PATH);
+}
+
+void handle_show(char* buffer, char* working_directory) {
+  char command[32] = {0};
+  char destination[32] = {0};
+  char temp[MAX_PATH] = {0};
+
+  strsplit(buffer, ' ', command, destination);
+
+  if (destination[0] == '/') {
+    // If the path is absolute I don't need to use working directory
+    memcpy(temp, destination, MAX_PATH);
+  } else {
+    // If the path is relative, I append the working directory
+    memcpy(temp, working_directory, MAX_PATH);
+    int len = strlen(temp);
+
+    if (len > 2 && temp[len - 1] != '/') {
+      temp[len] = '/';
+      temp[len + 1] = '\0';
+    }
+    strcat(temp, destination);
+  }
+
+  normalize_path(temp);
+
+  int fd = call_syscall_open_file(temp, FAT_READ);
+  if (fd == -1) {
+    call_syscall_write("[SHELL] Cannot open '");
+    call_syscall_write(temp);
+    call_syscall_write("'.\n");
+  }
+
+  if (fd > -1) {
+    char file_content[256] = {0};
+    int read_bytes;
+    int error = call_syscall_read_file(fd, file_content, 256, &read_bytes);
+    if (error) {
+      call_syscall_write("[SHELL] Cannot read '");
+      call_syscall_write(temp);
+      call_syscall_write("'.\n");
+    } else {
+      call_syscall_write(file_content);
+      call_syscall_write("\n");
+    }
+
+    call_syscall_close_file(fd);
+  }
 }
 
 void normalize_path(char* path) {
@@ -233,4 +293,59 @@ void normalize_path(char* path) {
     path[write] = '/';
     path[write+1] = '\0';
   }
+}
+
+void handle_write(char* buffer, char* working_directory) {
+  char file_name[16] = {0};
+  char file_content[32] = {0};
+
+  char* p = buffer;
+  while (*p != '\0' && *p != ' ') {
+    p++;
+  }
+
+  p++;
+
+  int i = 0;
+  while (*p != '\0' && *p != ' ') {
+    file_name[i] = *p;
+    p++;
+    i++;
+  }
+
+  file_name[i] = '\0';
+
+  p++;
+
+  i = 0;
+  while (*p != '\0' && *p != ' ') {
+    file_content[i] = *p;
+    p++;
+    i++;
+  }
+
+  file_content[i] = '\0';
+
+  char file_path[MAX_PATH] = {0};
+  strcat(file_path, working_directory);
+  strcat(file_path, file_name);
+
+  int fd = call_syscall_open_file(file_path, FAT_CREATE | FAT_WRITE);
+  if (fd == -1) {
+    call_syscall_write("[SHELL] Error: cannot open file '");
+    call_syscall_write(file_path);
+    call_syscall_write("'.\n");
+  }
+
+  if (fd != -1 && i > 0) {
+    int written_bytes;
+    int error = call_syscall_write_file(fd, file_content, i, &written_bytes);
+    if (error) {
+      call_syscall_write("[SHELL] Error: cannot write on file '");
+      call_syscall_write(file_path);
+      call_syscall_write("'.\n");
+    }
+  }
+
+  call_syscall_close_file(fd);
 }
