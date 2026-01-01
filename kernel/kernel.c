@@ -318,7 +318,7 @@ void handle_write(char* buffer, char* working_directory) {
   p++;
 
   i = 0;
-  while (*p != '\0' && *p != ' ') {
+  while (*p != '\0') {
     file_content[i] = *p;
     p++;
     i++;
@@ -339,7 +339,7 @@ void handle_write(char* buffer, char* working_directory) {
 
   if (fd != -1 && i > 0) {
     int written_bytes;
-    int error = call_syscall_write_file(fd, file_content, i, &written_bytes);
+    int error = call_syscall_write_file(fd, file_content, 256, &written_bytes);
     if (error) {
       call_syscall_write("[SHELL] Error: cannot write on file '");
       call_syscall_write(file_path);
