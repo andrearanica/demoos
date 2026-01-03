@@ -3,6 +3,9 @@
     .globl _start
 
 #include "../arch/sysregs.h"
+#include "../arch/peripherals/base.h"
+#include "../arch/mmu.h"
+#include "../libs/mm.h"
 
 _start:
     // Controlla il livello di eccezione (EL)
@@ -80,8 +83,8 @@ el1_entry:
     // This macro is a wrapper which calls all the macros to create directly the
     // entry both in PGD and in PUD
     .macro  create_pgd_entry, tbl, virt, tmp1, tmp2
-    create_table_entry \tbl, \virt, \tmp1, \tmp2
-    create_table_entry \tbl, \virt, \tmp1, \tmp2
+    create_table_entry \tbl, \virt, PGD_SHIFT, \tmp1, \tmp2
+    create_table_entry \tbl, \virt, PUD_SHIFT, \tmp1, \tmp2
     .endm
 
     // This macro writes the entry which points to the next table, in the given 

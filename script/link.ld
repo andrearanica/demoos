@@ -32,4 +32,7 @@ SECTIONS
 	. = ALIGN(4096);
 	__bss_end = .;
 	__bss_size = __bss_end - __bss_start;
+	. = ALIGN(0x00001000);
+	pgd = .;
+	.data.pgd : { . += (3 * (1 << 12)); }
 }
