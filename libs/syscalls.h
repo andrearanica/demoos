@@ -23,7 +23,7 @@
 #include "./fat32/fat.h"
 
 void syscall_write(char* buffer);
-int syscall_fork();
+int syscall_copy_process();
 int syscall_create_dir(char* dir_relative_path);
 int syscall_open_dir(char* dir_relative_path);
 int syscall_open_file(char* file_relative_path, uint8_t flags);

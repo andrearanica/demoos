@@ -5,7 +5,7 @@
 #include "scheduler.h"
 
 // Creates a new process that executes the given function
-int fork(unsigned long clone_flags, unsigned long function,
+int copy_process(unsigned long clone_flags, unsigned long function,
          unsigned long argument, unsigned long stack) {
   // I disable the preempt to avoid this function to be interrupted
   preempt_disable();

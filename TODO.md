@@ -85,11 +85,40 @@
 
 - Va modificata la funzione `move_to_user_space`
   - Avrà bisogno di 3 argomenti:
-    - Puntatore all'inizio del codice
-    - Dimensione dell'area, per fare la copia del codice dentro alla pagina del processo
+    - Nome del file contenente il binario da eseguire
     - Offset per la funzione main al suo interno (cioè il nuovo PC virtuale)
   - Viene impostato lo stato del registro e il program counter virtuale
-  - Il codice del programma viene preso dal filesystem e copiato dentro alla prima pagina del processo
-    - Viene chiamata la `allocate_user_page` per allocare una pagina in cui scrivere il codice 
-  - Lo stack pointer punta alla seconda pagina
+  - Lo stack pointer dovrà puntare all'ultimo indirizzo della pagina 1
+  - Il codice del programma viene preso dal filesystem e copiato dentro alla 16a pagina del processo
+    - Viene chiamata la `allocate_user_page` per allocare una pagina in cui scrivere il codice; l'indirizzo virtuale sarà il primo della 16a pagina
   - Viene anche impostata la pgd del processo corrente
+
+- Come funziona la `allocate_user_page`?
+  - Ottiene una pagina di memoria libera
+  - Mappa l'indirizzo virtuale fornito su quella pagina tramite la `map_page`
+  - Ritorna l'indirizzo fisico 0xffff + numero di pagina, che è l'indirizzo virtuale del kernel in cui verrà copiato il sorgente del programma
+
+- La `allocate_user_page` chiama la `map_page` per mappare la pagina appena allocata nelle tabelle delle pagine del processo utente
+  - Se il processo non ha una pgd, la crea e la salva nell'array `kernel_pages` per ricordarsela
+  - Chiamo la funzione `map_table` per 3 volte, per andare a scrivere nelle tabelle PGD, PUD e PMD le entry necessarie
+    - Se durante la creazione delle entry la tabella non esiste, la creo al momento
+  - Salva una struct indirizzo fisico pagina - indirizzo virtuale pagina nell'array user_pages del processo
+
+- La funzione `map_table` è quella responsabile di scrivere un descrittore che punta alla tabella successiva
+  - Calcola l'indice che l'indirizzo virtuale fornito avrà nella tabella
+  - Se la riga è vuota, vuol dire che non ho ancora la tabella successiva nella gerarchia
+    - Chiedo una pagina libera, faccio l'or con la flag e scrivo in `table[index]` quel valore
+  - Altrimenti ritorno il valore scritto in quella entry
+
+- La funzione `map_table_entry` fa la stessa cosa della `map_table`, solo che scrive nell'indice calcolato l'indirizzo fisico della pagina
+
+- Quindi alla fine di tutto, ogni processo ha due attributi importanti:
+  - Kernel pages: mantiene l'elenco di tutte le pagine allocate a un processo
+  - User pages: mantiene la coppia pagina fisica - pagina virtuale per ogni pagina associata al processo
+
+### Fork
+
+- Dobbiamo fare in modo che la fork crei una copia dello spazio degli indirizzi del processo padre, e che ritorni il PID se sei nel padre e 0 se sei nel figlio
+- Ora la copy_process dovrà copiare l'intero spazio degli indirizzi virtuale del processo padre, tramite la `copy_virt_memory`
+- La `copy_virt_memory` dovrà:
+  - Per ogni pagina associata al processo utente corrente, chiedo una nuova pagina utente con lo stesso indirizzo virtuale e ci copio il contenuto della pagina utente

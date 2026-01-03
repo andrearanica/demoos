@@ -7,7 +7,7 @@
 
 void syscall_write(char *buffer) { uart_puts(buffer); }
 
-int syscall_clone(unsigned long stack) { return fork(0, 0, 0, stack); }
+int syscall_clone(unsigned long stack) { return copy_process(0, 0, 0, stack); }
 
 unsigned long syscall_malloc() {
   unsigned long address = get_free_page();

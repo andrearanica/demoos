@@ -56,7 +56,7 @@ void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3) {
     uart_puts("[DEBUG] SD filesystem init error.\n");
   }
 
-  int res = fork(PF_KTHREAD, (unsigned long)&kernel_process, 0, 0);
+  int res = copy_process(PF_KTHREAD, (unsigned long)&kernel_process, 0, 0);
 }
 
 void kernel_process() {
