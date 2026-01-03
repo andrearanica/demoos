@@ -41,5 +41,8 @@ kernel8.elf: $(OBJS)
 run:
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -drive file=disk.img,if=sd,format=raw -serial stdio
 
+debug:
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -drive file=disk.img,if=sd,format=raw -serial stdio -s -S
+
 clean:
 	rm -f kernel8.elf kernel8.img $(OBJS)

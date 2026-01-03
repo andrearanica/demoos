@@ -94,7 +94,7 @@ el1_entry:
     lsr     \tmp1, \virt, #\shift
     and     \tmp1, \tmp1, #PTRS_PER_TABLE - 1
     // I calculate the address of the next page table (current table + 1 page)
-    add     \tmp2, \tmp2, #PAGE_SIZE
+    add     \tmp2, \tbl, #PAGE_SIZE
     // I put the last 2 bits to 1:
     // - First bit is the validity bit
     // - Second bit is the one which says that the entry points to another table
@@ -112,7 +112,7 @@ el1_entry:
     lsr     \start, \start, #SECTION_SHIFT
     and     \start, \start, #PTRS_PER_TABLE - 1
     lsr     \end,   \end,   #SECTION_SHIFT
-    and     \start, \start, #PTRS_PER_TABLE - 1
+    and     \end,   \end,   #PTRS_PER_TABLE - 1
     // Then I calculate the descriptor: I remove the first 21 bits from right by
     // performing a double shift, then I or this with the flags and I obtain the
     // descriptor
