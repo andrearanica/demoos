@@ -39,10 +39,10 @@ kernel8.elf: $(OBJS)
 	$(LD) -r -b binary -o $@ $<
 
 run:
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -drive file=disk.img,if=sd,format=raw -serial stdio
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -drive file=disk.img,if=sd,format=raw -serial stdio -d int -no-reboot
 
 debug:
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -drive file=disk.img,if=sd,format=raw -serial stdio -s -S
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -drive file=disk.img,if=sd,format=raw -serial stdio -s -S -d int -no-reboot & gnome-terminal -- gdb-multiarch kernel8.elf -ex "target remote :1234" -ex "layout split"
 
 clean:
 	rm -f kernel8.elf kernel8.img $(OBJS)
