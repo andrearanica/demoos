@@ -74,7 +74,6 @@ el1_entry:
     ldr     x2, =kernel_main
 
     // I enable the MMU
-enable_mmu:
     mov     x0, #SCTLR_MMU_ENABLED
     msr     sctlr_el1, x0
 
@@ -88,7 +87,7 @@ enable_mmu:
     create_table_entry \tbl, \virt, PUD_SHIFT, \tmp1, \tmp2
     .endm
 
-    // This macro writes the entry which points to the next table, in the given
+    // This macro writes the entry which points to the next table, in the given 
     // table for the given virtual address
     .macro  create_table_entry, tbl, virt, shift, tmp1, tmp2
     // First I extract the index in the table inside tmp1
@@ -138,7 +137,7 @@ __create_page_tables:
     mov     x1, #PGD_SIZE
     bl memzero
 
-    // The kernel will have the entire 1GB space completely mapped;
+    // The kernel will have the entire 1GB space completely mapped; 
     // it only needs PGD, PUD and PMD; PMD will directly point to the phisical
     // address, because it can cover the whole 1GB space
 
@@ -152,10 +151,10 @@ __create_page_tables:
     // In x0 there will be the PTE address, because it has been incremented
     // during the create_pgd_entry
     // In x1 there will be the physical address to map
-    mov x1, xzr
+    mov x1, xzr      
     // In x2 there will be first virtual address to map
     mov x2, #VA_START
-    // In x3 there will be the last virtual address to map
+    // In x3 there will be the last virtual address to map 
     // (until DEVICE_BASE, which is the first address for MMIO)
     ldr x3, =(VA_START + DEVICE_BASE - SECTION_SIZE)
     // Then I can call the macro passing also the flags
