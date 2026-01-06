@@ -74,6 +74,7 @@ el1_entry:
     ldr     x2, =kernel_main
 
     // I enable the MMU
+enable_mmu:
     mov     x0, #SCTLR_MMU_ENABLED
     msr     sctlr_el1, x0
 
