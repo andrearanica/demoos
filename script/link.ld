@@ -34,5 +34,5 @@ SECTIONS
 	__bss_size = __bss_end - __bss_start;
 	. = ALIGN(0x00001000);
 	pgd = .;
-	.data.pgd : { . += (3 * (1 << 12)); }
+	.data.pgd : { . += (5 * (1 << 12)); }
 }

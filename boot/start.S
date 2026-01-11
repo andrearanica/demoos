@@ -61,6 +61,7 @@ el1_entry:
     // I store the pgd filled previously in its register
     adrp    x0, pgd
     msr     ttbr1_el1, x0
+    msr     ttbr0_el1, x0
 
     // Then I store some configuration registers from the MMU
     ldr     x0, =(TCR_VALUE)
@@ -77,6 +78,7 @@ el1_entry:
 enable_mmu:
     mov     x0, #SCTLR_MMU_ENABLED
     msr     sctlr_el1, x0
+    nop
 
     // Then I jump to the kernel_main
     br      x2
@@ -170,6 +172,14 @@ __create_page_tables:
     ldr x3, =(VA_START + PHYS_MEMORY_SIZE - SECTION_SIZE)
     // Then I can call the macro passing also the flags
     create_block_map x0, x1, x2, x3, MMU_DEVICE_FLAGS, x4
+
+    mov     x1, xzr
+    create_pgd_entry x0, x1, x2, x3
+
+    mov x1, xzr
+    mov x2, xzr
+    mov x3, #0x200000
+    create_block_map x0, x1, x2, x3, MMU_FLAGS, x4
 
     // I restore the original return address and return to el1_entry
     mov x30, x29
