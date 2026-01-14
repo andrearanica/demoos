@@ -10,6 +10,7 @@
 #define THREAD_SIZE 4096
 
 #define MAX_FILES_PER_PROCESS 16
+#define MAX_PROCESS_PAGES 16
 
 #define PF_KTHREAD 0x00000002
 
@@ -42,6 +43,19 @@ typedef struct {
   };
 } FatResource;
 
+struct user_page {
+    unsigned long physical_address;
+    unsigned long virtual_address;
+};
+
+struct mm_struct {
+    unsigned long pgd;
+    int n_user_pages;
+    struct user_page user_pages[MAX_PROCESS_PAGES];
+    int n_kernel_pages;
+    unsigned long kernel_pages[MAX_PROCESS_PAGES];
+};
+
 struct PCB {
   struct cpu_context cpu_context;
   long state;
@@ -54,6 +68,8 @@ struct PCB {
   unsigned long flags;
 
   FatResource *files[16];
+
+  struct mm_struct mm;
 };
 
 #define PROCESS_RUNNING 1

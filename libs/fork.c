@@ -55,26 +55,27 @@ int copy_process(unsigned long clone_flags, unsigned long function,
   return process_id;
 }
 
-int move_to_user_mode(unsigned long pc) {
+int move_to_user_mode(unsigned long start, unsigned long size, unsigned long pc) {
   struct pt_regs *regs = task_pt_regs(current_process);
-  memzero((unsigned long)regs, sizeof(*regs));
+  // memzero((unsigned long)regs, sizeof(*regs));
 
-  // PC will point to the function to execute in user mode: kernel_exit will
-  // copy this pointer in the elr_el1 register to return after exception
-  // handling
   regs->pc = pc;
-
-  // This state will be copied into spsr_el1 by kernel_exit and becomes the
-  // processor state after exception handling
   regs->pstate = PSR_MODE_EL0t;
+  regs->sp = PAGE_SIZE - 1;
+  unsigned long code_page_virtual_address = 15 * PAGE_SIZE;
 
-  // Then I create a new stack for the process
-  unsigned long stack = get_free_page();
-  if (!stack) {
-    return -1;
+  for (int i = 0; i < 16; i++) {
+      allocate_user_page(current_process, code_page_virtual_address);
   }
-  regs->sp = stack + PAGE_SIZE;
-  current_process->stack = stack;
+
+  unsigned long code_page = current_process->mm.user_pages[15].physical_address;
+  if (code_page == 0) {
+      return -1;
+  }
+
+  memcpy(&code_page, &start, size);
+
+  set_pgd(current_process->mm.pgd);
 
   return 0;
 }

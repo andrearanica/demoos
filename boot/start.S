@@ -173,7 +173,8 @@ __create_page_tables:
     // Then I can call the macro passing also the flags
     create_block_map x0, x1, x2, x3, MMU_DEVICE_FLAGS, x4
 
-    // FIXME now I create the identity map for the low addresses
+    // Since the kernel is put in the low memory, I create the identity map
+    // for the low addresses to make the kernel able to map the 0x80000 addresses
     adrp    x0, pgd
     mov     x1, xzr
     create_pgd_entry x0, x1, x2, x3

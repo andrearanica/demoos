@@ -3,21 +3,6 @@
 
 #define __NR_SYSCALLS 13
 
-// Each system call is defined by a number used by the assembly
-#define SYSCALL_WRITE_NUMBER            0
-#define SYSCALL_MALLOC_NUMBER           1
-#define SYSCALL_CLONE_NUMBER            2
-#define SYSCALL_EXIT_NUMBER             3
-#define SYSCALL_CREATE_DIR_NUMBER       4
-#define SYSCALL_OPEN_DIR_NUMBER         5
-#define SYSCALL_OPEN_FILE_NUMBER        6
-#define SYSCALL_CLOSE_FILE_NUMBER       7
-#define SYSCALL_WRITE_FILE_NUMBER       8
-#define SYSCALL_READ_FILE_NUMBER        9
-#define SYSCALL_YIELD_NUMBER            10
-#define SYSCALL_INPUT_NUMBER            11
-#define SYSCALL_GET_NEXT_ENTRY_NUMBER   12
-
 #ifndef __ASSEMBLER__
 
 #include "./fat32/fat.h"

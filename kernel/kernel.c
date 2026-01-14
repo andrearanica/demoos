@@ -7,6 +7,7 @@
 #include "../libs/scheduler.h"
 #include "../libs/syscalls.h"
 #include "../libs/utils.h"
+#include "../user/user.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
@@ -24,8 +25,10 @@
 void kernel_process();
 void user_process();
 void user_process_fs();
-void shell();
+// void shell();
 void normalize_path(char*);
+
+void breakpoint() {}
 
 void handle_help(char* buffer);
 void handle_ls(char* buffer, char* working_directory);
@@ -40,6 +43,7 @@ void print_tree(const char *path, int depth);
 void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3) {
   uart_init();
   uart_puts("demoOS v.0.0.0\n");
+
   irq_vector_init();
   uart_puts("[DONE] irq vector init\n");
   timer_init();
@@ -57,15 +61,31 @@ void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3) {
   }
 
   int res = copy_process(PF_KTHREAD, (unsigned long)&kernel_process, 0, 0);
-}
+  if (res < 0) {
+      uart_puts("[ERROR] Cannot create kernel process.\n");
+  }
 
-void kernel_process() {
-  int error = move_to_user_mode((unsigned long)&shell);
-  if (error < 0) {
-    uart_puts("[ERROR] Cannot move process from kernel mode to user mode\n");
+  // FIXME if I rmeove this loop the kernel restarts itself
+  while (1) {
+
   }
 }
 
+void kernel_process() {
+    uart_puts("[DEBUG] Kernel process started.\n");
+
+    unsigned long begin = (unsigned long)&user_begin;
+    unsigned long end = (unsigned long)&user_end;
+    unsigned long process = (unsigned long)&user_process;
+    unsigned long size = (end - begin);
+
+    int error = move_to_user_mode(begin, size, process - begin);
+    if (error < 0) {
+        uart_puts("[ERROR] Cannot move process from kernel mode to user mode\n");
+    }
+}
+
+/*
 void shell() {
   char working_directory[64] = "/\0";
   while (1) {
@@ -436,3 +456,4 @@ void handle_write(char* buffer, char* working_directory) {
 
   call_syscall_close_file(fd);
 }
+ */

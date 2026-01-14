@@ -10,6 +10,13 @@ SECTIONS
 	}
 	. = ALIGN(4096);
 
+	user_begin = .;
+	.text.user : { build/user* (.text) }
+	.rodata.user : { build/user* (.rodata) }
+	.data.user : { build/user* (.data) }
+	.bss.user : { build/user* (.bss) }
+	user_end = .;
+
 	__font_start = .;
 	.rodata :
 	{
