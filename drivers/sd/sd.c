@@ -127,7 +127,7 @@ void enable_card_detect();
 void enable_clock_and_command();
 void enable_data_pins();
 long reset_emmc();
-int enable_card();
+int enable_card(long*);
 
 void wait_msec(unsigned int n) {
   uint32_t system_clock = *(volatile uint32_t *)SYS_TIMER_CLOCK;
@@ -588,7 +588,7 @@ long reset_emmc() {
   return cnt;
 }
 
-int enable_card(int *ccs) {
+int enable_card(long *ccs) {
   long cnt = 6;
   long r = 0;
   while (!(r & ACMD41_CMD_COMPLETE) && cnt--) {

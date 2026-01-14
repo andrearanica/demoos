@@ -25,7 +25,7 @@ void kernel_process();
 void user_process();
 void user_process_fs();
 void shell();
-void normalize_path();
+void normalize_path(char*);
 
 void handle_help(char* buffer);
 void handle_ls(char* buffer, char* working_directory);

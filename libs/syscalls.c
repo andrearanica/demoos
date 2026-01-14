@@ -4,6 +4,7 @@
 #include "allocator.h"
 #include "fork.h"
 #include "scheduler.h"
+#include "utils.h"
 
 void syscall_write(char *buffer) { uart_puts(buffer); }
 
