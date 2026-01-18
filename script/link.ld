@@ -2,8 +2,8 @@ ENTRY(_start)
 
 SECTIONS
 {
-	. = 0x80000;
-	.text :
+	. = 0x800000;
+	.text : AT(0x80000)
 	{
 		KEEP(*(.text.boot))
 		*(.text)
@@ -31,6 +31,7 @@ SECTIONS
 	}
 	. = ALIGN(4096);
 
+    . = ALIGN(0x8);
 	__bss_start = .;
 	.bss :
 	{

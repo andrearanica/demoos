@@ -42,7 +42,7 @@ run:
 	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -drive file=disk.img,if=sd,format=raw -serial stdio -d int,mmu -D qemu.log
 
 debug:
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -drive file=disk.img,if=sd,format=raw -serial stdio -s -S -d int,mmu -D qemu.log & x-terminal-emulator -- gdb-multiarch kernel8.elf -ex "target remote :1234" -ex "layout asm" -ex "layout regs"
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -drive file=disk.img,if=sd,format=raw -serial stdio -s -S -d int,mmu,cpu_reset,guest_errors & x-terminal-emulator -- gdb-multiarch kernel8.elf -ex "target remote :1234" -ex "layout asm" -ex "layout regs"
 
 clean:
 	rm -f kernel8.elf kernel8.img $(OBJS)

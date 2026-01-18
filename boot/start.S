@@ -45,17 +45,26 @@ init_primary_code:
     ldr x5, =__bss_start
     ldr w6, =__bss_size
 
+/*
 clear_bss_loop:
     cbz w6, kernel_launch
     str xzr, [x5], #8
     sub     w6, w6, #1
     cbnz    w6, clear_bss_loop
+*/
+
+clear_bss:
+    and x0, x0, x0
+    adr x0, __bss_start
+    adr x1, __bss_end
+    sub x1, x1, x0
+    bl memzero
 
 el1_entry:
     bl __create_page_tables
 
     // I change the SP to point to the first virtual address of the kernel
-    mov     x0, #VA_START
+    mov     x0, #VA_START   // 0x80074
     add     sp, x0, #LOW_MEMORY
 
     // I store the pgd filled previously in its register
@@ -81,7 +90,7 @@ enable_mmu:
     nop
 
     // Then I jump to the kernel_main
-    br      x2
+    br      x2     // 0x800a8
 
     // This macro is a wrapper which calls all the macros to create directly the
     // entry both in PGD and in PUD

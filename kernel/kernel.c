@@ -23,7 +23,6 @@
 #define MAX_PATH 64
 
 void kernel_process();
-void user_process();
 void user_process_fs();
 // void shell();
 void normalize_path(char*);
