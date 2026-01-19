@@ -182,6 +182,7 @@ __create_page_tables:
     // Then I can call the macro passing also the flags
     create_block_map x0, x1, x2, x3, MMU_DEVICE_FLAGS, x4
 
+    /*
     // Since the kernel is put in the low memory, I create the identity map
     // for the low addresses to make the kernel able to map the 0x80000 addresses
     adrp    x0, pgd
@@ -192,6 +193,7 @@ __create_page_tables:
     mov x2, xzr
     mov x3, #0x200000
     create_block_map x0, x1, x2, x3, MMU_FLAGS, x4
+    */
 
     // I restore the original return address and return to el1_entry
     mov x30, x29
