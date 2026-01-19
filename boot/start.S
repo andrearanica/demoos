@@ -87,7 +87,6 @@ el1_entry:
 enable_mmu:
     mov     x0, #SCTLR_MMU_ENABLED
     msr     sctlr_el1, x0
-    nop
 
     // Then I jump to the kernel_main
     br      x2     // 0x800a8
@@ -182,7 +181,8 @@ __create_page_tables:
     // Then I can call the macro passing also the flags
     create_block_map x0, x1, x2, x3, MMU_DEVICE_FLAGS, x4
 
-    /*
+    /* This is an identity mapping which was used when virutal addresses were low
+       I don't want to remove it because maybe it will be useful
     // Since the kernel is put in the low memory, I create the identity map
     // for the low addresses to make the kernel able to map the 0x80000 addresses
     adrp    x0, pgd
