@@ -41,6 +41,7 @@ void print_tree(const char *path, int depth);
 
 void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3) {
   uart_init();
+
   uart_puts("demoOS v.0.0.0\n");
 
   irq_vector_init();

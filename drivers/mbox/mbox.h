@@ -2,6 +2,7 @@
 #define __MBOX_H
 
 #include <stdint.h>
+#include "../../libs/mm.h"
 
 enum {
     // The offsets for Mailbox registers
