@@ -3,13 +3,15 @@
 #include "../../libs/fat32/fat.h"
 #include "sd.h"
 
+Fat g_fat;
+
 bool sd_read_adapter(uint8_t *buffer, uint32_t sector) {
   int res = sd_readblock(sector, buffer, 1);
   return res != 0;
 }
 
 bool sd_write_adapter(const uint8_t *buffer, uint32_t sector) {
-  int res = sd_writeblock(buffer, sector, 1);
+  int res = sd_writeblock((unsigned char*)buffer, sector, 1);
   return res != 0;
 }
 

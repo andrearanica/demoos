@@ -77,7 +77,7 @@ int move_to_user_mode(unsigned long start, unsigned long size, unsigned long pc)
 
   set_pgd(current_process->mm.pgd);
 
-  return 0;
+  return 0;         // 0xffff000000083b84
 }
 
 struct pt_regs *task_pt_regs(struct PCB *process) {

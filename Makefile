@@ -29,6 +29,8 @@ kernel8.elf: $(OBJS)
 	$(LD) $(LDFLAGS) $(OBJS) -T script/link.ld -o $@
 
 # Pattern rules
+libs/fat32/%.o: CFLAGS += -w    # I ignore warnings beacause it is a submodule
+
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 

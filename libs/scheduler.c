@@ -1,6 +1,5 @@
 #include "scheduler.h"
 #include "../drivers/irq/controller.h"
-#include "../drivers/uart/uart.h" // TODO remove, only for debug
 #include "allocator.h"
 #include "cpu_switch.h"
 

@@ -39,7 +39,7 @@ void handle_show(char* buffer, char* working_directory);
 void handle_tree(char *buffer, char *working_directory);
 void print_tree(const char *path, int depth);
 
-void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3) {
+void kernel_main() {
   uart_init();
 
   uart_puts("demoOS v.0.0.0\n");

@@ -76,7 +76,7 @@ struct PCB {
 #define PROCESS_ZOMBIE 2
 #define PROCESS_WAITING_UART_INPUT 3
 
-#define INIT_PROCESS {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 1, 1, 0, 0}
+#define INIT_PROCESS {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 1, 1, 0, 0, 0, 0, {}, {0, 0, {}, 0, {}}}
 
 extern struct PCB *current_process;
 extern struct PCB *processes[N_PROCESSES];

@@ -69,7 +69,7 @@ void map_page(struct PCB* process, unsigned long virtual_address, unsigned long 
     }
 
     unsigned long pmd_virtual_address = (unsigned long)(pmd + VA_START);
-    unsigned long pte = map_table(&pud_virtual_address, PMD_SHIFT, virtual_address, &new_table_entry_created);
+    unsigned long pte = map_table(&pmd_virtual_address, PMD_SHIFT, virtual_address, &new_table_entry_created);
     if (new_table_entry_created) {
         // The PUD table has been created and I need to track it
         process->mm.kernel_pages[++process->mm.n_kernel_pages] = pte;

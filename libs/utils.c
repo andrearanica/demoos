@@ -34,7 +34,7 @@ char *strcat(char *dest, const char *src) {
 // Copies in the first string the content of the second one
 char *strcpy(char *dest, const char *src) {
   char *dest_start = dest;
-  char *pointer = src;
+  char *pointer = (char*)src;
   while (*pointer != '\0') {
     *dest = *pointer;
     pointer++;
@@ -48,7 +48,7 @@ char *strcpy(char *dest, const char *src) {
 // Splits the given string in two substrings using a char delimiterù
 // This is different from the stdc 'strtok'!
 void strsplit(const char *src, char delimiter, char *dest1, char *dest2) {
-  char *pointer = src;
+  char *pointer = (char*)src;
 
   while (*pointer != '\0' && *pointer != '\r' && *pointer != '\n') {
     if (*pointer == delimiter) {
@@ -68,5 +68,5 @@ void strsplit(const char *src, char delimiter, char *dest1, char *dest2) {
     }
   }
 
-  dest1 = src;
+  dest1 = (char*)src;
 }
