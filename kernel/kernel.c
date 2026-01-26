@@ -65,7 +65,7 @@ void kernel_main() {
       uart_puts("[ERROR] Cannot create kernel process.\n");
   }
 
-  // FIXME if I rmeove this loop the kernel restarts itself
+  // FIXME if I remove this loop the kernel restarts itself
   while (1) {
 
   }
@@ -78,8 +78,10 @@ void kernel_process() {
     unsigned long end = (unsigned long)&user_end;
     unsigned long process = (unsigned long)&user_process;
     unsigned long size = (end - begin);
+    unsigned long pc = (process - begin);
 
-    int error = move_to_user_mode(begin, size, process - begin);
+    uart_puts("[DEBUG] Process "); uart_hex(process); uart_puts(" with PC "); uart_hex(pc); uart_puts("\n");
+    int error = move_to_user_mode(begin, size, pc);
     if (error < 0) {
         uart_puts("[ERROR] Cannot move process from kernel mode to user mode\n");
     }

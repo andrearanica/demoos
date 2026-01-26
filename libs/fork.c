@@ -12,7 +12,7 @@ int copy_process(unsigned long clone_flags, unsigned long function,
 
   // I ask the allocator a free page for the new PCB
   struct PCB *new_process;
-  new_process = (struct PCB *)get_free_page();
+  new_process = (struct PCB *)allocate_kernel_page();
   if (!new_process) {
     return 1;
   }
@@ -61,23 +61,22 @@ int move_to_user_mode(unsigned long start, unsigned long size, unsigned long pc)
 
   regs->pc = pc;
   regs->pstate = PSR_MODE_EL0t;
-  regs->sp = PAGE_SIZE - 1;
+  regs->sp = PAGE_SIZE;
   unsigned long code_page_virtual_address = 15 * PAGE_SIZE;
 
   for (int i = 0; i < 16; i++) {
       allocate_user_page(current_process, code_page_virtual_address);
   }
 
-  unsigned long code_page = current_process->mm.user_pages[15].physical_address;
-  if (code_page == 0) {
+  unsigned long code_page_physical_address = current_process->mm.user_pages[15].physical_address;
+  if (code_page_physical_address == 0) {
       return -1;
   }
-
-  memcpy(&code_page, &start, size);
+  memcpy((void*)code_page_virtual_address, (void*)start, size);
 
   set_pgd(current_process->mm.pgd);
 
-  return 0;         // 0xffff000000083b84
+  return 0;
 }
 
 struct pt_regs *task_pt_regs(struct PCB *process) {
