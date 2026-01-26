@@ -64,14 +64,18 @@ int move_to_user_mode(unsigned long start, unsigned long size, unsigned long pc)
   regs->sp = PAGE_SIZE;
   unsigned long code_page_virtual_address = 15 * PAGE_SIZE;
 
+  unsigned long page_virtual_address = 0;
   for (int i = 0; i < 16; i++) {
-      allocate_user_page(current_process, code_page_virtual_address);
+      allocate_user_page(current_process, page_virtual_address);
+      page_virtual_address += PAGE_SIZE;
   }
 
   unsigned long code_page_physical_address = current_process->mm.user_pages[15].physical_address;
   if (code_page_physical_address == 0) {
       return -1;
   }
+
+  uart_puts("Copio il codice utente ("); uart_hex(start); uart_puts(", di dimensione "); uart_hex(size); uart_puts(") nella pagina codice\n");
   memcpy((void*)code_page_virtual_address, (void*)start, size);
 
   set_pgd(current_process->mm.pgd);

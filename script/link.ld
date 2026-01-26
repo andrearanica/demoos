@@ -8,9 +8,10 @@ SECTIONS
 
     . = ALIGN(0x00001000);
 	user_begin = .;
-	.text.user : { build/user* (.text) }
-	.rodata.user : { build/user* (.rodata) }
-	.data.user : { build/user* (.data) }
+	.text.user : { *user.o (.text) }
+	.rodata.user : { *user.o (.rodata) }
+	.data.user : { *user.o (.data) }
+    . = ALIGN(0x00001000);
 	user_end = .;
 
     .text : { *(.text) }
