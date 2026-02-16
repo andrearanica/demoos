@@ -78,8 +78,8 @@ void kernel_process() {
     unsigned long size = ((unsigned long)&user_end - (unsigned long)&user_begin);
     unsigned long pc = (process - (unsigned long)&user_begin);
 
-    uart_puts("[DEBUG] Process "); uart_hex((unsigned long)&user_begin); uart_puts("-"); uart_hex((unsigned long)&user_end); uart_puts(" with PC "); uart_hex(process); uart_puts(" (relative: "); uart_hex(pc); uart_puts(") is moved to user mode\n");
     int error = move_to_user_mode((unsigned long)&user_begin, size, pc);
+    uart_puts("[DEBUG] Process "); uart_hex((unsigned long)&user_begin); uart_puts("-"); uart_hex((unsigned long)&user_end); uart_puts(" with PC "); uart_hex(process); uart_puts(" (relative: "); uart_hex(pc); uart_puts(") is moved to user mode\n");
     if (error < 0) {
         uart_puts("[ERROR] Cannot move process from kernel mode to user mode\n");
     }

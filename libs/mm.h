@@ -5,6 +5,7 @@
 
 #define PHYS_MEMORY_SIZE    0x40000000
 
+#define PAGE_MASK           0xfffffffffffff000
 #define PAGE_SHIFT          12
 #define TABLE_SHIFT         9
 #define SECTION_SHIFT       (PAGE_SHIFT + TABLE_SHIFT)
@@ -17,8 +18,6 @@
 #define PGD_SHIFT			PAGE_SHIFT + 3*TABLE_SHIFT
 #define PUD_SHIFT			PAGE_SHIFT + 2*TABLE_SHIFT
 #define PMD_SHIFT			PAGE_SHIFT + TABLE_SHIFT
-
-#define PAGE_MASK           0xfffffffffffff000
 
 #define LOW_MEMORY (2 * SECTION_SIZE)   // Kernel memory
 #define HIGH_MEMORY 0x3F000000          // IO registers memory

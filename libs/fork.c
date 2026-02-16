@@ -57,34 +57,29 @@ int copy_process(unsigned long clone_flags, unsigned long function,
 
 int move_to_user_mode(unsigned long start, unsigned long size, unsigned long pc) {
   struct pt_regs *regs = task_pt_regs(current_process);
-  // memzero((unsigned long)regs, sizeof(*regs));
 
-  regs->pc = pc;
+
+  memzero((unsigned long)regs, sizeof(struct pt_regs));
+
   regs->pstate = PSR_MODE_EL0t;
-  regs->sp = PAGE_SIZE;
-  unsigned long code_page_virtual_address = 15 * PAGE_SIZE;
+  regs->pc = pc;
+  regs->sp = 2 * PAGE_SIZE;
 
-  unsigned long page_virtual_address = 0;
   for (int i = 0; i < 16; i++) {
-      allocate_user_page(current_process, page_virtual_address);
-      page_virtual_address += PAGE_SIZE;
-  }
+    unsigned long virtual_address  = i * PAGE_SIZE;
+    unsigned long kernel_virtual_address = allocate_user_page(current_process, virtual_address);
 
-  unsigned long code_page_physical_address = current_process->mm.user_pages[15].physical_address;
-  if (code_page_physical_address == 0) {
-      return -1;
+    int is_code_page = (i == 0 && kernel_virtual_address != 0);
+    if (is_code_page) {
+      memcpy((void*)kernel_virtual_address, (void*)start, size);
+    }
   }
-
-  uart_puts("Copio il codice utente ("); uart_hex(start); uart_puts(", di dimensione "); uart_hex(size); uart_puts(") nella pagina codice\n");
-  memcpy((void*)code_page_virtual_address, (void*)start, size);
 
   set_pgd(current_process->mm.pgd);
-
   return 0;
 }
 
 struct pt_regs *task_pt_regs(struct PCB *process) {
-  unsigned long p =
-      (unsigned long)process + THREAD_SIZE - sizeof(struct pt_regs);
+  unsigned long p = (unsigned long)process + THREAD_SIZE - sizeof(struct pt_regs);
   return (struct pt_regs *)p;
 }

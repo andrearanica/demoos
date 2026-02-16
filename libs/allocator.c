@@ -2,6 +2,7 @@
 #include "mm.h"
 #include "scheduler.h"
 #include "../arch/mmu.h"
+#include "../drivers/uart/uart.h"
 
 unsigned long map_table(unsigned long* table, unsigned long index_shift, unsigned long virtual_address, int* new_table_entry_created);
 void map_table_entry(unsigned long* pte, unsigned long virtual_address, unsigned long page_physical_address);
@@ -53,30 +54,30 @@ void map_page(struct PCB* process, unsigned long virtual_address, unsigned long 
     unsigned long pgd = process->mm.pgd;
 
     int new_table_entry_created = 0;
-    unsigned long pgd_virtual_address = (unsigned long)(pgd + VA_START);
+    unsigned long* pgd_virtual_address = (unsigned long*)(pgd + VA_START);
 
-    unsigned long pud = map_table(&pgd_virtual_address, PGD_SHIFT, virtual_address, &new_table_entry_created);
+    unsigned long pud = map_table(pgd_virtual_address, PGD_SHIFT, virtual_address, &new_table_entry_created);
     if (new_table_entry_created) {
         // The PUD table has been created and I need to track it
         process->mm.kernel_pages[++process->mm.n_kernel_pages] = pud;
     }
 
-    unsigned long pud_virtual_address = (unsigned long)(pud + VA_START);
-    unsigned long pmd = map_table(&pud_virtual_address, PUD_SHIFT, virtual_address, &new_table_entry_created);
+    unsigned long* pud_virtual_address = (unsigned long*)(pud + VA_START);
+    unsigned long pmd = map_table(pud_virtual_address, PUD_SHIFT, virtual_address, &new_table_entry_created);
     if (new_table_entry_created) {
         // The PUD table has been created and I need to track it
         process->mm.kernel_pages[++process->mm.n_kernel_pages] = pmd;
     }
 
-    unsigned long pmd_virtual_address = (unsigned long)(pmd + VA_START);
-    unsigned long pte = map_table(&pmd_virtual_address, PMD_SHIFT, virtual_address, &new_table_entry_created);
+    unsigned long* pmd_virtual_address = (unsigned long*)(pmd + VA_START);
+    unsigned long pte = map_table(pmd_virtual_address, PMD_SHIFT, virtual_address, &new_table_entry_created);
     if (new_table_entry_created) {
         // The PUD table has been created and I need to track it
         process->mm.kernel_pages[++process->mm.n_kernel_pages] = pte;
     }
 
-    unsigned long pte_virtual_address = (unsigned long)(pte + VA_START);
-    map_table_entry(&pte_virtual_address, virtual_address, page_physical_address);
+    unsigned long* pte_virtual_address = (unsigned long*)(pte + VA_START);
+    map_table_entry(pte_virtual_address, virtual_address, page_physical_address);
 
     struct user_page p = {page_physical_address, virtual_address};
     process->mm.user_pages[process->mm.n_user_pages++] = p;
@@ -95,6 +96,7 @@ unsigned long map_table(unsigned long* table, unsigned long index_shift, unsigne
         unsigned long next_level_table = get_free_page();
         unsigned long entry = next_level_table | MM_TYPE_PAGE_TABLE;
         table[index] = entry;
+        return next_level_table;
     } else {
         // Otherwhise the page with the given virtual address is already written in the page table
         *new_table_entry_created = 0;
@@ -110,4 +112,24 @@ void map_table_entry(unsigned long* pte, unsigned long virtual_address, unsigned
     index = index & (PTRS_PER_TABLE - 1);
     unsigned long entry = page_physical_address | MMU_PTE_FLAGS;
     pte[index] = entry;
+}
+
+static int index = -1;
+
+// This function handles the page fault exceptions
+int do_mem_abort(unsigned long address, unsigned long esr) {
+    unsigned long dfs = (esr & 0b111111);
+    if ((dfs / 0b111100) == 0b100) {
+        unsigned long page = get_free_page();
+        if (page == 0) {
+            return -1;
+        }
+        map_page(current_process, address & PAGE_MASK, page);
+        index++;
+        if (index > 2) {
+            return -1;
+        }
+        return 0;
+    }
+    return -1;
 }

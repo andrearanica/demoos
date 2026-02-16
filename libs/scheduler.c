@@ -43,6 +43,7 @@ void _schedule() {
       }
     }
   }
+  
   switch_to_process(processes[next_process_index]);
   preempt_enable();
 }
