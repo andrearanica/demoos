@@ -13,6 +13,7 @@
 .set SYSCALL_YIELD_NUMBER, 10
 .set SYSCALL_INPUT_NUMBER, 11
 .set SYSCALL_GET_NEXT_ENTRY_NUMBER, 12
+.set SYSCALL_FORK_NUMBER, 13
 
 .globl call_syscall_write
 call_syscall_write:
@@ -103,6 +104,12 @@ call_syscall_input:
 .globl call_syscall_get_next_entry
 call_syscall_get_next_entry:
     mov w8, #SYSCALL_GET_NEXT_ENTRY_NUMBER
+    svc #0
+    ret
+
+.globl call_syscall_fork
+call_syscall_fork:
+    mov w8, #SYSCALL_FORK_NUMBER
     svc #0
     ret
 

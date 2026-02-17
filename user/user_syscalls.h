@@ -20,5 +20,6 @@ int call_syscall_get_next_entry(int file_descriptor, FatEntryInfo* entry_info);
 
 void call_syscall_yield();
 int call_syscall_input(char* buffer, int len);
+int call_syscall_fork();
 
 #endif

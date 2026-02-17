@@ -165,3 +165,14 @@ unsigned long user_to_kernel_address(unsigned long user_virtual_address) {
 
     return (page_physical_address & PAGE_MASK) + page_offset + VA_START;
 }
+
+int copy_virtual_memory(struct PCB* destination_process) {
+    struct PCB* source_process = current_process;
+    for (int i = 0; i < source_process->mm.n_user_pages; i++) {
+        unsigned long kernel_virtual_address = allocate_user_page(destination_process, source_process->mm.user_pages[i].virtual_address);
+        if (kernel_virtual_address == 0) {
+            return -1;
+        }
+        memcpy((void*)kernel_virtual_address, (void*)source_process->mm.user_pages[i].virtual_address, PAGE_SIZE);
+    }
+}

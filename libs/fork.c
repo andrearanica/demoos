@@ -5,8 +5,7 @@
 #include "scheduler.h"
 
 // Creates a new process that executes the given function
-int copy_process(unsigned long clone_flags, unsigned long function,
-         unsigned long argument, unsigned long stack) {
+int copy_process(unsigned long clone_flags, unsigned long function, unsigned long argument) {
   // I disable the preempt to avoid this function to be interrupted
   preempt_disable();
 
@@ -17,10 +16,13 @@ int copy_process(unsigned long clone_flags, unsigned long function,
     return 1;
   }
 
+
   struct pt_regs *child_registers = task_pt_regs(new_process);
+  /*
   memzero((unsigned long)child_registers, sizeof(struct pt_regs));
   memzero((unsigned long)&new_process->cpu_context, sizeof(struct cpu_context));
   memzero((unsigned long)&new_process->files, sizeof(new_process->files));
+  */
 
   if (clone_flags & PF_KTHREAD) {
     // If we are running a kernel thread, we only need to specify the function
@@ -30,9 +32,10 @@ int copy_process(unsigned long clone_flags, unsigned long function,
     // If we are running a user thread, I need to allocate a new stack
     struct pt_regs *current_registers = task_pt_regs(current_process);
     *child_registers = *current_registers;
+
+    // The X0 register is the one which contains the return value; if the process is the child, it has to be 0
     child_registers->registers[0] = 0;
-    child_registers->sp = stack + PAGE_SIZE;
-    new_process->stack = stack;
+    copy_virtual_memory(new_process);
   }
 
   int process_id = n_processes++;
@@ -52,12 +55,13 @@ int copy_process(unsigned long clone_flags, unsigned long function,
 
   preempt_enable();
 
+  uart_puts("Ho creato un processo con PID: "); uart_hex(process_id); uart_puts("\n");
+
   return process_id;
 }
 
 int move_to_user_mode(unsigned long start, unsigned long size, unsigned long pc) {
   struct pt_regs *regs = task_pt_regs(current_process);
-
 
   memzero((unsigned long)regs, sizeof(struct pt_regs));
 
