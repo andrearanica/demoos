@@ -6,7 +6,10 @@
 #include "scheduler.h"
 #include "utils.h"
 
-void syscall_write(char *buffer) { uart_puts(buffer); }
+void syscall_write(char *buffer) {
+  unsigned long kernel_buffer = user_to_kernel_address((unsigned long)buffer);
+  uart_puts((char*)kernel_buffer);
+}
 
 int syscall_clone(unsigned long stack) { return copy_process(0, 0, 0, stack); }
 

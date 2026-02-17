@@ -3,6 +3,7 @@
 
 void user_process() {
     while (1) {
-        call_syscall_write("Sono il processo utente!");
+        char buffer[40] = "Sono il processo utente!\n";
+        call_syscall_write(buffer);
     }
 }
