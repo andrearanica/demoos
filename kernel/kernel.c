@@ -55,9 +55,9 @@ void kernel_main() {
 
   int fs_ok = sd_filesystem_init();
   if (fs_ok == SD_FILESYSTEM_INIT_OK) {
-    uart_puts("[DEBUG] SD filesystem init successful.\n");
+    uart_puts("[DONE] SD filesystem init success\n");
   } else {
-    uart_puts("[DEBUG] SD filesystem init error.\n");
+    uart_puts("[ERROR] SD filesystem init error\n");
   }
 
   int res = copy_process(PF_KTHREAD, (unsigned long)&kernel_process, 0);
@@ -66,9 +66,7 @@ void kernel_main() {
   }
 
   // FIXME if I remove this loop the kernel restarts itself
-  while (1) {
-
-  }
+  while (1) {}
 }
 
 void kernel_process() {
@@ -79,7 +77,6 @@ void kernel_process() {
     unsigned long pc = (process - (unsigned long)&user_begin);
 
     int error = move_to_user_mode((unsigned long)&user_begin, size, pc);
-    uart_puts("[DEBUG] Process "); uart_hex((unsigned long)&user_begin); uart_puts("-"); uart_hex((unsigned long)&user_end); uart_puts(" with PC "); uart_hex(process); uart_puts(" (relative: "); uart_hex(pc); uart_puts(") is moved to user mode\n");
     if (error < 0) {
         uart_puts("[ERROR] Cannot move process from kernel mode to user mode\n");
     }
