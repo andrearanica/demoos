@@ -7,6 +7,7 @@
 #include "../libs/scheduler.h"
 #include "../libs/syscalls.h"
 #include "../libs/utils.h"
+#include "../user/user.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
@@ -22,10 +23,11 @@
 #define MAX_PATH 64
 
 void kernel_process();
-void user_process();
 void user_process_fs();
-void shell();
-void normalize_path();
+// void shell();
+void normalize_path(char*);
+
+void breakpoint() {}
 
 void handle_help(char* buffer);
 void handle_ls(char* buffer, char* working_directory);
@@ -37,9 +39,11 @@ void handle_show(char* buffer, char* working_directory);
 void handle_tree(char *buffer, char *working_directory);
 void print_tree(const char *path, int depth);
 
-void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3) {
+void kernel_main() {
   uart_init();
-  uart_puts("demoOS v.0.0.0\n");
+
+  uart_puts("demoOS v.0.0.1\n");
+
   irq_vector_init();
   uart_puts("[DONE] irq vector init\n");
   timer_init();
@@ -51,21 +55,34 @@ void kernel_main(uint64_t dtb_ptr32, uint64_t x1, uint64_t x2, uint64_t x3) {
 
   int fs_ok = sd_filesystem_init();
   if (fs_ok == SD_FILESYSTEM_INIT_OK) {
-    uart_puts("[DEBUG] SD filesystem init successful.\n");
+    uart_puts("[DONE] SD filesystem init success\n");
   } else {
-    uart_puts("[DEBUG] SD filesystem init error.\n");
+    uart_puts("[ERROR] SD filesystem init error\n");
   }
 
-  int res = copy_process(PF_KTHREAD, (unsigned long)&kernel_process, 0, 0);
+  int res = copy_process(PF_KTHREAD, (unsigned long)&kernel_process, 0);
+  if (res < 0) {
+      uart_puts("[ERROR] Cannot create kernel process.\n");
+  }
+
+  // FIXME if I remove this loop the kernel restarts itself
+  while (1) {}
 }
 
 void kernel_process() {
-  int error = move_to_user_mode((unsigned long)&shell);
-  if (error < 0) {
-    uart_puts("[ERROR] Cannot move process from kernel mode to user mode\n");
-  }
+    uart_puts("[DEBUG] Kernel process started.\n");
+
+    unsigned long process = (unsigned long)&user_process;
+    unsigned long size = ((unsigned long)&user_end - (unsigned long)&user_begin);
+    unsigned long pc = (process - (unsigned long)&user_begin);
+
+    int error = move_to_user_mode((unsigned long)&user_begin, size, pc);
+    if (error < 0) {
+        uart_puts("[ERROR] Cannot move process from kernel mode to user mode\n");
+    }
 }
 
+/*
 void shell() {
   char working_directory[64] = "/\0";
   while (1) {
@@ -436,3 +453,4 @@ void handle_write(char* buffer, char* working_directory) {
 
   call_syscall_close_file(fd);
 }
+ */

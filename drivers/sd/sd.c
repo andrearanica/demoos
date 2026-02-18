@@ -127,7 +127,7 @@ void enable_card_detect();
 void enable_clock_and_command();
 void enable_data_pins();
 long reset_emmc();
-int enable_card();
+int enable_card(long*);
 
 void wait_msec(unsigned int n) {
   uint32_t system_clock = *(volatile uint32_t *)SYS_TIMER_CLOCK;
@@ -209,7 +209,7 @@ int sd_execute_command(unsigned int code, unsigned int arg) {
   else if (code == CMD_SEND_OP_COND)
     return r;
   else if (code == CMD_SEND_IF_COND)
-    return r == arg ? SD_OK : SD_ERROR;
+    return (unsigned int)r == arg ? SD_OK : SD_ERROR;
   else if (code == CMD_ALL_SEND_CID) {
     r |= *EMMC_RESP3;
     r |= *EMMC_RESP2;
@@ -254,7 +254,7 @@ int sd_readblock(unsigned int lba, unsigned char *buffer, unsigned int num) {
   } else {
     *EMMC_BLKSIZECNT = (1 << 16) | 512;
   }
-  while (c < num) {
+  while ((unsigned int)c < num) {
     if (!(sd_scr[0] & SCR_SUPP_CCS)) {
       sd_execute_command(CMD_READ_SINGLE, (lba + c) * 512);
       if (sd_err)
@@ -273,7 +273,7 @@ int sd_readblock(unsigned int lba, unsigned char *buffer, unsigned int num) {
   if (num > 1 && !(sd_scr[0] & SCR_SUPP_SET_BLKCNT) &&
       (sd_scr[0] & SCR_SUPP_CCS))
     sd_execute_command(CMD_STOP_TRANS, 0);
-  return sd_err != SD_OK || c != num ? 0 : num * 512;
+  return sd_err != SD_OK || (unsigned int)c != num ? 0 : num * 512;
 }
 
 /**
@@ -375,7 +375,7 @@ int sd_writeblock(unsigned char *buffer, unsigned int lba, unsigned int num) {
   } else {
     *EMMC_BLKSIZECNT = (1 << 16) | 512;
   }
-  while (c < num) {
+  while ((unsigned int)c < num) {
     if (!(sd_scr[0] & SCR_SUPP_CCS)) {
       sd_execute_command(CMD_WRITE_SINGLE, (lba + c) * 512);
       if (sd_err)
@@ -399,7 +399,7 @@ int sd_writeblock(unsigned char *buffer, unsigned int lba, unsigned int num) {
   if (num > 1 && !(sd_scr[0] & SCR_SUPP_SET_BLKCNT) &&
       (sd_scr[0] & SCR_SUPP_CCS))
     sd_execute_command(CMD_STOP_TRANS, 0);
-  return sd_err != SD_OK || c != num ? 0 : num * 512;
+  return sd_err != SD_OK || (unsigned int)c != num ? 0 : num * 512;
 }
 
 /**
@@ -517,7 +517,7 @@ int sd_init() {
 }
 
 void enable_card_detect() {
-  long r, cnt, ccs = 0;
+  long r;
 
   // GPIO_CD
   r = *GPFSEL4;
@@ -588,7 +588,7 @@ long reset_emmc() {
   return cnt;
 }
 
-int enable_card(int *ccs) {
+int enable_card(long *ccs) {
   long cnt = 6;
   long r = 0;
   while (!(r & ACMD41_CMD_COMPLETE) && cnt--) {
@@ -609,7 +609,7 @@ int enable_card(int *ccs) {
     uart_hex(r);
     uart_puts("\n");*/
 
-    if (sd_err != SD_TIMEOUT && sd_err != SD_OK) {
+    if ((int)sd_err != SD_TIMEOUT && (int)sd_err != SD_OK) {
       uart_puts("ERROR: EMMC ACMD41 returned error\n");
       return sd_err;
     }

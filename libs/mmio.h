@@ -2,8 +2,9 @@
 #define __MMIO_H
 
 #include <stdint.h>
+#include "./mm.h"
 
-#define MMIO_BASE 0x3F000000
+#define MMIO_BASE (VA_START + 0x3F000000)
 
 static inline void mmio_write(uint64_t reg, uint32_t data)
 {

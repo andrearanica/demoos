@@ -12,7 +12,8 @@ volatile uint32_t __attribute__((aligned(16))) mbox[36];
 
 int mbox_call(uint8_t channel)
 {
-  uint64_t r = (((uint64_t)(&mbox) & ~MBOX_MAIL_CHANNEL_MASK) | (channel & MBOX_MAIL_CHANNEL_MASK));
+  uint64_t physical_mbox = (uint64_t)&mbox - VA_START;
+  uint64_t r = ((physical_mbox & ~MBOX_MAIL_CHANNEL_MASK) | (channel & MBOX_MAIL_CHANNEL_MASK));
   // wait until we can talk to the VC
   while ( mmio_read(MBOX_STATUS) & MBOX_FULL ) { }
   // send our message to property channel and wait for the response

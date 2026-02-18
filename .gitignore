@@ -2,3 +2,4 @@
 *.elf
 *.img
 .vscode/settings.json
+qemu.log

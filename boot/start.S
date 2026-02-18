@@ -45,22 +45,32 @@ init_primary_code:
     ldr x5, =__bss_start
     ldr w6, =__bss_size
 
+/*
 clear_bss_loop:
     cbz w6, kernel_launch
     str xzr, [x5], #8
     sub     w6, w6, #1
     cbnz    w6, clear_bss_loop
+*/
+
+clear_bss:
+    and x0, x0, x0
+    adr x0, __bss_start
+    adr x1, __bss_end
+    sub x1, x1, x0
+    bl memzero
 
 el1_entry:
     bl __create_page_tables
 
     // I change the SP to point to the first virtual address of the kernel
-    mov     x0, #VA_START
+    mov     x0, #VA_START   // 0x80074
     add     sp, x0, #LOW_MEMORY
 
     // I store the pgd filled previously in its register
     adrp    x0, pgd
     msr     ttbr1_el1, x0
+    msr     ttbr0_el1, x0
 
     // Then I store some configuration registers from the MMU
     ldr     x0, =(TCR_VALUE)
@@ -74,11 +84,12 @@ el1_entry:
     ldr     x2, =kernel_main
 
     // I enable the MMU
+enable_mmu:
     mov     x0, #SCTLR_MMU_ENABLED
     msr     sctlr_el1, x0
 
     // Then I jump to the kernel_main
-    br      x2
+    br      x2     // 0x800a8
 
     // This macro is a wrapper which calls all the macros to create directly the
     // entry both in PGD and in PUD
@@ -87,7 +98,7 @@ el1_entry:
     create_table_entry \tbl, \virt, PUD_SHIFT, \tmp1, \tmp2
     .endm
 
-    // This macro writes the entry which points to the next table, in the given 
+    // This macro writes the entry which points to the next table, in the given
     // table for the given virtual address
     .macro  create_table_entry, tbl, virt, shift, tmp1, tmp2
     // First I extract the index in the table inside tmp1
@@ -137,7 +148,7 @@ __create_page_tables:
     mov     x1, #PGD_SIZE
     bl memzero
 
-    // The kernel will have the entire 1GB space completely mapped; 
+    // The kernel will have the entire 1GB space completely mapped;
     // it only needs PGD, PUD and PMD; PMD will directly point to the phisical
     // address, because it can cover the whole 1GB space
 
@@ -151,10 +162,10 @@ __create_page_tables:
     // In x0 there will be the PTE address, because it has been incremented
     // during the create_pgd_entry
     // In x1 there will be the physical address to map
-    mov x1, xzr      
+    mov x1, xzr
     // In x2 there will be first virtual address to map
     mov x2, #VA_START
-    // In x3 there will be the last virtual address to map 
+    // In x3 there will be the last virtual address to map
     // (until DEVICE_BASE, which is the first address for MMIO)
     ldr x3, =(VA_START + DEVICE_BASE - SECTION_SIZE)
     // Then I can call the macro passing also the flags
@@ -169,6 +180,20 @@ __create_page_tables:
     ldr x3, =(VA_START + PHYS_MEMORY_SIZE - SECTION_SIZE)
     // Then I can call the macro passing also the flags
     create_block_map x0, x1, x2, x3, MMU_DEVICE_FLAGS, x4
+
+    /* This is an identity mapping which was used when virutal addresses were low
+       I don't want to remove it because maybe it will be useful
+    // Since the kernel is put in the low memory, I create the identity map
+    // for the low addresses to make the kernel able to map the 0x80000 addresses
+    adrp    x0, pgd
+    mov     x1, xzr
+    create_pgd_entry x0, x1, x2, x3
+
+    mov x1, xzr
+    mov x2, xzr
+    mov x3, #0x200000
+    create_block_map x0, x1, x2, x3, MMU_FLAGS, x4
+    */
 
     // I restore the original return address and return to el1_entry
     mov x30, x29

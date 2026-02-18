@@ -4,10 +4,14 @@
 #include "allocator.h"
 #include "fork.h"
 #include "scheduler.h"
+#include "utils.h"
 
-void syscall_write(char *buffer) { uart_puts(buffer); }
+void syscall_write(char *buffer) {
+  unsigned long kernel_buffer = user_to_kernel_address((unsigned long)buffer);
+  uart_puts((char*)kernel_buffer);
+}
 
-int syscall_clone(unsigned long stack) { return copy_process(0, 0, 0, stack); }
+int syscall_clone() { return copy_process(0, 0, 0); }
 
 unsigned long syscall_malloc() {
   unsigned long address = get_free_page();
@@ -193,9 +197,15 @@ int syscall_get_next_entry(int file_descriptor, FatEntryInfo *entry_info) {
   return 1;
 }
 
+int syscall_fork() {
+  int pid = copy_process(0, 0, 0);
+  return pid;
+}
+
 void *const sys_call_table[] = {
-    syscall_write,         syscall_malloc,     syscall_clone,
-    syscall_exit,          syscall_create_dir, syscall_open_dir,
-    syscall_open_file,     syscall_close_file, syscall_write_file,
-    syscall_read_file,     syscall_yield,      syscall_input,
-    syscall_get_next_entry};
+    syscall_write,          syscall_malloc,     syscall_clone,
+    syscall_exit,           syscall_create_dir, syscall_open_dir,
+    syscall_open_file,      syscall_close_file, syscall_write_file,
+    syscall_read_file,      syscall_yield,      syscall_input,
+    syscall_get_next_entry, syscall_fork,
+};

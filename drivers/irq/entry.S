@@ -172,6 +172,9 @@ el0_sync:
 	// Then I check if it is an SVC 64 bit
 	cmp x24, 		#ESR_ELx_EC_SVC64
 	b.eq 			el0_svc
+	// Then I check if it is a data abort from a lower exception level
+	cmp x24, 		#ESR_ELx_EC_DABT_LOW
+	b.eq 			el0_da
 	handle_invalid_entry	0, SYNC_ERROR
 
 // Alias: number of system calls
@@ -208,6 +211,19 @@ ret_from_syscall:
 	// I save the value of x0 in the stack
 	str			x0, [sp, #S_X0]
 	kernel_exit	0
+
+el0_da:
+	bl	enable_irq
+	mrs	x0, far_el1
+	mrs	x1, esr_el1
+	bl	do_mem_abort
+	cmp x0, 0
+	b.eq	1f
+	handle_invalid_entry 0, DATA_ABORT_ERROR
+
+1:
+	bl disable_irq
+	kernel_exit 0
 
 .globl err_hang
 err_hang: b err_hang

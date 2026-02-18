@@ -8,8 +8,8 @@ CFLAGS := -Wall -Wextra -O2 -ffreestanding -nostdlib -nostartfiles -fno-stack-pr
 LDFLAGS := -nostdlib
 
 # Sources
-C_SRCS := $(wildcard drivers/*/*.c kernel/*.c utils/*.c libs/*.c libs/fat32/fat.c)
-S_SRCS := $(wildcard drivers/*/*.S boot/*.S libs/*.S)
+C_SRCS := $(wildcard drivers/*/*.c kernel/*.c utils/*.c libs/*.c libs/fat32/fat.c user/*.c)
+S_SRCS := $(wildcard drivers/*/*.S boot/*.S libs/*.S user/*.S)
 PSF_SRCS := $(wildcard font/*.psf)
 
 # Objects
@@ -29,6 +29,8 @@ kernel8.elf: $(OBJS)
 	$(LD) $(LDFLAGS) $(OBJS) -T script/link.ld -o $@
 
 # Pattern rules
+libs/fat32/%.o: CFLAGS += -w    # I ignore warnings beacause it is a submodule
+
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
@@ -39,10 +41,10 @@ kernel8.elf: $(OBJS)
 	$(LD) -r -b binary -o $@ $<
 
 run:
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -drive file=disk.img,if=sd,format=raw -serial stdio
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -drive file=disk.img,if=sd,format=raw -serial stdio -d int,mmu -D qemu.log
 
 debug:
-	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -drive file=disk.img,if=sd,format=raw -serial stdio -s -S
+	qemu-system-aarch64 -M raspi3b -kernel kernel8.img -drive file=disk.img,if=sd,format=raw -serial stdio -s -S -d int,mmu,cpu_reset,guest_errors & x-terminal-emulator -- gdb-multiarch kernel8.elf -ex "target remote :1234" -ex "layout asm" -ex "layout regs"
 
 clean:
 	rm -f kernel8.elf kernel8.img $(OBJS)
