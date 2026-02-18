@@ -8,9 +8,21 @@ SECTIONS
 
     . = ALIGN(0x00001000);
 	user_begin = .;
-	.text.user : { *user.o (.text) }
-	.rodata.user : { *user.o (.rodata) }
-	.data.user : { *user.o (.data) }
+	.text.user : {
+		*user.o (.text .text.*)
+		*memory.o (.text .text.*)
+		*string.o (.text .text.*)
+	}
+	.rodata.user : {
+		*user.o (.rodata .rodata.*)
+		*memory.o (.rodata .rodata.*)
+		*string.o (.rodata .rodata.*)
+	}
+	.data.user : {
+		*user.o (.data .data.*)
+		*memory.o (.data . data.*)
+		*string.o (.data .data.*)
+	}
     . = ALIGN(0x00001000);
 	user_end = .;
 

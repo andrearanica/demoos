@@ -3,6 +3,7 @@
 #include "../drivers/uart/uart.h"
 #include "allocator.h"
 #include "scheduler.h"
+#include "../common/memory.h"
 
 // Creates a new process that executes the given function
 int copy_process(unsigned long clone_flags, unsigned long function, unsigned long argument) {
@@ -15,7 +16,6 @@ int copy_process(unsigned long clone_flags, unsigned long function, unsigned lon
   if (!new_process) {
     return 1;
   }
-
 
   struct pt_regs *child_registers = task_pt_regs(new_process);
   memzero((unsigned long)child_registers, sizeof(struct pt_regs));
@@ -65,13 +65,16 @@ int move_to_user_mode(unsigned long start, unsigned long size, unsigned long pc)
   regs->pc = pc;
   regs->sp = 2 * PAGE_SIZE;
 
+  unsigned long copied_bytes = 0;
   for (int i = 0; i < 16; i++) {
     unsigned long virtual_address  = i * PAGE_SIZE;
     unsigned long kernel_virtual_address = allocate_user_page(current_process, virtual_address);
 
-    int is_code_page = (i == 0 && kernel_virtual_address != 0);
-    if (is_code_page) {
-      memcpy((void*)kernel_virtual_address, (void*)start, size);
+    if (copied_bytes < size) {
+      int bytes_to_copy = (size - copied_bytes > PAGE_SIZE) ? PAGE_SIZE : size - copied_bytes;
+      memcpy((void*)kernel_virtual_address, (void*)(start + copied_bytes), bytes_to_copy);
+
+      copied_bytes += bytes_to_copy;
     }
   }
 

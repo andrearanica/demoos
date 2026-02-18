@@ -3,6 +3,7 @@
 #include "scheduler.h"
 #include "../arch/mmu.h"
 #include "../drivers/uart/uart.h"
+#include "../common/memory.h"
 
 unsigned long map_table(unsigned long* table, unsigned long index_shift, unsigned long virtual_address, int* new_table_entry_created);
 void map_table_entry(unsigned long* pte, unsigned long virtual_address, unsigned long page_physical_address);

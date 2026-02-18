@@ -4,12 +4,12 @@ LD := aarch64-elf-ld
 OBJCOPY := aarch64-elf-objcopy
 
 # Flags
-CFLAGS := -Wall -Wextra -O2 -ffreestanding -nostdlib -nostartfiles -fno-stack-protector -mstrict-align -mcpu=cortex-a53+nofp -fno-builtin -U_FORTIFY_SOURCE
+CFLAGS := -Wall -Wextra -O2 -ffreestanding -nostdlib -nostartfiles -fno-stack-protector -mstrict-align -mcpu=cortex-a53+nofp -fno-builtin -U_FORTIFY_SOURCE -mgeneral-regs-only
 LDFLAGS := -nostdlib
 
 # Sources
-C_SRCS := $(wildcard drivers/*/*.c kernel/*.c utils/*.c libs/*.c libs/fat32/fat.c user/*.c)
-S_SRCS := $(wildcard drivers/*/*.S boot/*.S libs/*.S user/*.S)
+C_SRCS := $(wildcard drivers/*/*.c kernel/*.c utils/*.c libs/*.c libs/fat32/fat.c user/*.c common/*.c)
+S_SRCS := $(wildcard drivers/*/*.S boot/*.S libs/*.S user/*.S common/*.S)
 PSF_SRCS := $(wildcard font/*.psf)
 
 # Objects

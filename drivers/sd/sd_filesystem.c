@@ -29,7 +29,7 @@ int sd_filesystem_init() {
     return SD_FILESYSTEM_INIT_ERROR;
   }
 
-  int mount_error = fat_mount(&disk_operations, 0, &g_fat, "mnt");
+  int mount_error = fat_mount(&disk_operations, 0, &g_fat, "mnt\0");
   if (mount_error) {
     return SD_FILESYSTEM_INIT_ERROR;
   }
