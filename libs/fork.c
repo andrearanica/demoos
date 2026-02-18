@@ -18,23 +18,21 @@ int copy_process(unsigned long clone_flags, unsigned long function, unsigned lon
 
 
   struct pt_regs *child_registers = task_pt_regs(new_process);
-  /*
   memzero((unsigned long)child_registers, sizeof(struct pt_regs));
   memzero((unsigned long)&new_process->cpu_context, sizeof(struct cpu_context));
   memzero((unsigned long)&new_process->files, sizeof(new_process->files));
-  */
 
   if (clone_flags & PF_KTHREAD) {
     // If we are running a kernel thread, we only need to specify the function
     new_process->cpu_context.x19 = function;
     new_process->cpu_context.x20 = argument;
   } else {
-    // If we are running a user thread, I need to allocate a new stack
     struct pt_regs *current_registers = task_pt_regs(current_process);
     *child_registers = *current_registers;
 
     // The X0 register is the one which contains the return value; if the process is the child, it has to be 0
     child_registers->registers[0] = 0;
+
     copy_virtual_memory(new_process);
   }
 
@@ -54,8 +52,6 @@ int copy_process(unsigned long clone_flags, unsigned long function, unsigned lon
   processes[process_id] = new_process;
 
   preempt_enable();
-
-  uart_puts("Ho creato un processo con PID: "); uart_hex(process_id); uart_puts("\n");
 
   return process_id;
 }

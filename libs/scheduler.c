@@ -61,6 +61,8 @@ void switch_to_process(struct PCB *next_process) {
   }
   struct PCB *previous_process = current_process;
   current_process = next_process;
+
+  set_pgd(next_process->mm.pgd);
   cpu_switch_to_process(previous_process, current_process);
 }
 

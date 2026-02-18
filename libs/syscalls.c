@@ -11,7 +11,7 @@ void syscall_write(char *buffer) {
   uart_puts((char*)kernel_buffer);
 }
 
-int syscall_clone(unsigned long stack) { return copy_process(0, 0, 0); }
+int syscall_clone() { return copy_process(0, 0, 0); }
 
 unsigned long syscall_malloc() {
   unsigned long address = get_free_page();
@@ -198,7 +198,8 @@ int syscall_get_next_entry(int file_descriptor, FatEntryInfo *entry_info) {
 }
 
 int syscall_fork() {
-  return copy_process(0, 0, 0);
+  int pid = copy_process(0, 0, 0);
+  return pid;
 }
 
 void *const sys_call_table[] = {

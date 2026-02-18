@@ -49,6 +49,7 @@ void map_page(struct PCB* process, unsigned long virtual_address, unsigned long 
     // If the process doesn't have a PGD, I create it in a free page
     if (!process->mm.pgd) {
         process->mm.pgd = get_free_page();
+        memzero(process->mm.pgd + VA_START, PAGE_SIZE);
         process->mm.kernel_pages[++process->mm.n_kernel_pages] = process->mm.pgd;
     }
     unsigned long pgd = process->mm.pgd;
@@ -94,6 +95,7 @@ unsigned long map_table(unsigned long* table, unsigned long index_shift, unsigne
         // If the table doesn't have an entry in the index, I need to create it
         *new_table_entry_created = 1;
         unsigned long next_level_table = get_free_page();
+        memzero(next_level_table + VA_START, PAGE_SIZE);
         unsigned long entry = next_level_table | MM_TYPE_PAGE_TABLE;
         table[index] = entry;
         return next_level_table;
@@ -173,6 +175,12 @@ int copy_virtual_memory(struct PCB* destination_process) {
         if (kernel_virtual_address == 0) {
             return -1;
         }
-        memcpy((void*)kernel_virtual_address, (void*)source_process->mm.user_pages[i].virtual_address, PAGE_SIZE);
+
+        memzero(kernel_virtual_address, PAGE_SIZE);
+
+        unsigned long destination_address = kernel_virtual_address;
+        unsigned long source_address = (source_process->mm.user_pages[i].physical_address + VA_START);
+        memcpy((void*)destination_address, (void*)source_address, PAGE_SIZE);
     }
+    return 0;
 }
