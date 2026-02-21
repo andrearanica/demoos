@@ -1,3 +1,5 @@
+#include "../arch/peripherals/base.h"
+#include "../arch/mmu.h"
 #include "fork.h"
 #include "../drivers/irq/entry.h"
 #include "../drivers/uart/uart.h"
@@ -76,6 +78,12 @@ int move_to_user_mode(unsigned long start, unsigned long size, unsigned long pc)
 
       copied_bytes += bytes_to_copy;
     }
+  }
+
+  // I also need to map the addresses for MMIO to let the process communicate with the SD card
+  int error = map_sector(current_process, DEVICE_BASE, PHYS_MEMORY_SIZE - SECTION_SIZE, DEVICE_BASE, MMU_DEVICE_FLAGS);
+  if (error) {
+    uart_puts("[ERROR] Cannot map MMIO in process page tables\n");
   }
 
   set_pgd(current_process->mm.pgd);
