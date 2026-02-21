@@ -19,11 +19,8 @@
 
 unsigned long get_free_page();
 void free_page(unsigned long p);
-void memzero(unsigned long src, unsigned long n);
-int memcmp(const void *src1, const void *src2, size_t n);
-void memset(void *dest, int c, size_t count);
-void memcpy(void *dest, void *src, size_t count);
 void map_page(struct PCB* process, unsigned long virtual_address, unsigned long page);
+int map_sector(struct PCB* process, unsigned long start_virtual_address, unsigned long end_virtual_address, unsigned long page_physical_address, unsigned long flags);
 
 int copy_virtual_memory(struct PCB* destination_process);
 unsigned long allocate_kernel_page();

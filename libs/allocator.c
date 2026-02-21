@@ -3,6 +3,7 @@
 #include "scheduler.h"
 #include "../arch/mmu.h"
 #include "../drivers/uart/uart.h"
+#include "../common/memory.h"
 
 unsigned long map_table(unsigned long* table, unsigned long index_shift, unsigned long virtual_address, int* new_table_entry_created);
 void map_table_entry(unsigned long* pte, unsigned long virtual_address, unsigned long page_physical_address);
@@ -114,6 +115,39 @@ void map_table_entry(unsigned long* pte, unsigned long virtual_address, unsigned
     index = index & (PTRS_PER_TABLE - 1);
     unsigned long entry = page_physical_address | MMU_PTE_FLAGS;
     pte[index] = entry;
+}
+
+// Maps the given range of addresses in the PMD as a sector
+int map_sector(struct PCB* process, unsigned long start_virtual_address, unsigned long end_virtual_address, unsigned long page_physical_address, unsigned long flags) {
+    unsigned long first_index = (start_virtual_address >> SECTION_SHIFT) & (PTRS_PER_TABLE - 1);
+    unsigned long last_index = (end_virtual_address >> SECTION_SHIFT) & (PTRS_PER_TABLE - 1);
+
+    // First I obtain the descriptor
+    unsigned long descriptor;
+    descriptor = page_physical_address >> SECTION_SHIFT;
+    descriptor = descriptor << SECTION_SHIFT;
+    descriptor |= flags;
+
+    unsigned long* pgd = (unsigned long*)(process->mm.pgd + VA_START);
+
+    unsigned long pud_phys = pgd[(start_virtual_address >> PGD_SHIFT) & (PTRS_PER_TABLE - 1)];
+    if (!(pud_phys & 1)) {
+        return -1;
+    }
+    unsigned long* pud = (unsigned long*)((pud_phys & PAGE_MASK) + VA_START);
+
+    unsigned long pmd_phys = pud[(start_virtual_address >> PUD_SHIFT) & (PTRS_PER_TABLE - 1)];
+    if (!(pmd_phys & 1)) {
+        return -1;
+    }
+    unsigned long* pmd = (unsigned long*)((pmd_phys & PAGE_MASK) + VA_START);
+
+    for (unsigned long index = first_index; index <= last_index; index++) {
+        pmd[index] = descriptor;
+        descriptor += SECTION_SIZE;
+    }
+
+    return 0;
 }
 
 static int index = -1;

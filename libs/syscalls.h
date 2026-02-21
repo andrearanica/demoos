@@ -10,7 +10,7 @@
 void syscall_write(char* buffer);
 int syscall_copy_process();
 int syscall_create_dir(char* dir_relative_path);
-int syscall_open_dir(char* dir_relative_path);
+int syscall_open_dir(const char* dir_relative_path);
 int syscall_open_file(char* file_relative_path, uint8_t flags);
 int syscall_close_file(int file_descriptor);
 int syscall_write_file(int file_descriptor, char* buffer, int len, int* bytes);

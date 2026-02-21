@@ -5,6 +5,7 @@
 #include "fork.h"
 #include "scheduler.h"
 #include "utils.h"
+#include "../common/string.h"
 
 void syscall_write(char *buffer) {
   unsigned long kernel_buffer = user_to_kernel_address((unsigned long)buffer);
@@ -14,7 +15,7 @@ void syscall_write(char *buffer) {
 int syscall_clone() { return copy_process(0, 0, 0); }
 
 unsigned long syscall_malloc() {
-  unsigned long address = get_free_page();
+  unsigned long address = allocate_kernel_page();
   if (!address) {
     return -1;
   }
@@ -36,7 +37,7 @@ int syscall_create_dir(char *dir_relative_path) {
     }
   }
 
-  Dir *dir = (Dir *)get_free_page();
+  Dir *dir = (Dir *)allocate_kernel_page();
   int error = fat_dir_create(dir, complete_path);
   if (error) {
     return -1;
@@ -48,11 +49,11 @@ int syscall_create_dir(char *dir_relative_path) {
   return file_descriptor;
 }
 
-int syscall_open_dir(char *dir_relative_path) {
+int syscall_open_dir(const char *dir_relative_path) {
   char complete_path[128];
   strcpy(complete_path, "/mnt/\0");
   strcat(complete_path, dir_relative_path);
-
+  
   int file_descriptor = -1;
   for (int i = 0; i < MAX_FILES_PER_PROCESS; i++) {
     if (current_process->files[i] == NULL) {
@@ -60,14 +61,15 @@ int syscall_open_dir(char *dir_relative_path) {
       break;
     }
   }
-
-  Dir *dir = (Dir *)get_free_page();
+  
+  Dir *dir = (Dir *)allocate_kernel_page();
   int error = fat_dir_open(dir, complete_path);
+  
   if (error) {
     return -1;
   }
 
-  current_process->files[file_descriptor] = (FatResource *)get_free_page();
+  current_process->files[file_descriptor] = (FatResource *)allocate_kernel_page();
   current_process->files[file_descriptor]->resource_type = RESOURCE_TYPE_FOLDER;
   current_process->files[file_descriptor]->d = dir;
 
@@ -87,7 +89,7 @@ int syscall_open_file(char *file_relative_path, uint8_t flags) {
     }
   }
 
-  File *file = (File *)get_free_page();
+  File *file = (File *)allocate_kernel_page();
   int error = fat_file_open(file, complete_path, flags);
 
   if (error) {
@@ -175,7 +177,7 @@ int syscall_input(char *buffer, int len) {
 int syscall_get_next_entry(int file_descriptor, FatEntryInfo *entry_info) {
   FatResource *fat_resource = current_process->files[file_descriptor];
   Dir *dir = fat_resource->d;
-
+  
   DirInfo dir_info;
   int error = fat_dir_read(dir, &dir_info);
 

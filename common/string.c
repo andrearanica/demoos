@@ -1,4 +1,4 @@
-#include "utils.h"
+#include "string.h"
 
 // Returns the length of the given string
 size_t strlen(const char *str) {
@@ -69,4 +69,13 @@ void strsplit(const char *src, char delimiter, char *dest1, char *dest2) {
   }
 
   dest1 = (char*)src;
+}
+
+int strcmp(const char* src1, const char* src2, int size) {
+  for (int i = 0; i < size; i++) {
+    if (src1[i] != src2[i]) {
+      return 1;
+    }
+  }
+  return 0;
 }
