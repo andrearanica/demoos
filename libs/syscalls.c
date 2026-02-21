@@ -15,7 +15,7 @@ void syscall_write(char *buffer) {
 int syscall_clone() { return copy_process(0, 0, 0); }
 
 unsigned long syscall_malloc() {
-  unsigned long address = get_free_page();
+  unsigned long address = allocate_kernel_page();
   if (!address) {
     return -1;
   }
@@ -37,7 +37,7 @@ int syscall_create_dir(char *dir_relative_path) {
     }
   }
 
-  Dir *dir = (Dir *)get_free_page();
+  Dir *dir = (Dir *)allocate_kernel_page();
   int error = fat_dir_create(dir, complete_path);
   if (error) {
     return -1;
@@ -89,7 +89,7 @@ int syscall_open_file(char *file_relative_path, uint8_t flags) {
     }
   }
 
-  File *file = (File *)get_free_page();
+  File *file = (File *)allocate_kernel_page();
   int error = fat_file_open(file, complete_path, flags);
 
   if (error) {

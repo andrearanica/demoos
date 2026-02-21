@@ -25,8 +25,8 @@ void print_tree(const char *path, int depth);
 void normalize_path(char* path);
 
 void shell() {
+  char working_directory[64] = "/";
   while (1) {
-    char working_directory[64] = "/";
     call_syscall_write(UART_GREEN_COLOR);
     call_syscall_write("demoos:\0");
     call_syscall_write(UART_BLUE_COLOR);
@@ -91,34 +91,24 @@ void handle_ls(char *buffer, char *working_directory) {
 
   FatEntryInfo *info;
   while (1) {
-    memset(info->name, 0, 64);
-    int result = call_syscall_get_next_entry(fd, info);
-    call_syscall_write("debug\n");
-    if (result != 1) {
-      break;
-    }
+      memset(info->name, 0, 64);
+      int result = call_syscall_get_next_entry(fd, info);
+      if (result != 1) {
+          break;
+      }
 
-    FatEntryInfo *info;
-    while (1) {
-        memset(info->name, 0, 64);
-        int result = call_syscall_get_next_entry(fd, info);
-        if (result != 1) {
-            break;
-        }
+      if (info->is_dir) {
+          call_syscall_write("\x1b[34m\0");
+          call_syscall_write(info->name);
+          call_syscall_write("\x1b[0m\0");
+      } else {
+          call_syscall_write(info->name);
+      }
 
-        if (info->is_dir) {
-            call_syscall_write("\x1b[34m\0");
-            call_syscall_write(info->name);
-            call_syscall_write("\x1b[0m\0");
-        } else {
-            call_syscall_write(info->name);
-        }
-
-        call_syscall_write("\n");
-    }
-
-    call_syscall_write("\n");
+      call_syscall_write("\n");
   }
+
+  call_syscall_write("\n");
 }
 
 void handle_pwd(char *working_directory) {
@@ -144,7 +134,7 @@ void handle_mkdir(char *buffer, char *working_directory) {
   }
   strcat(temp, dir_name);
 
-  int fd = syscall_create_dir(temp);
+  int fd = call_syscall_create_dir(temp);
   if (fd == -1) {
     call_syscall_write("[SHELL] Cannot create '");
     call_syscall_write(temp);
@@ -273,7 +263,7 @@ void normalize_path(char* path) {
 }
 
 void print_tree(const char *path, int depth) {
-  int fd = syscall_open_dir(path);
+  int fd = call_syscall_open_dir(path);
   if (fd == -1) {
     return;
   }
@@ -329,7 +319,7 @@ void handle_tree(char *buffer, char *working_directory) {
     strcat(fullpath, target);
   }
   normalize_path(fullpath);
-  int fd = syscall_open_dir(fullpath);
+  int fd = call_syscall_open_dir(fullpath);
   if (fd == -1) {
     call_syscall_write("[SHELL] Error: cannot open directory '");
     call_syscall_write(fullpath);
