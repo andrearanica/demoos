@@ -4,7 +4,7 @@
 #include "./allocator.h"
 #include <stddef.h>
 
-void send_message(struct PCB* source_process, int destination_process_pid, char* body) {
+void send_message(struct PCB* source_process, int destination_process_pid, MessageType message_type, char* body) {
     struct Message* message = (struct Message*)allocate_kernel_page();
 
     struct PCB* destination_process = NULL;
@@ -21,6 +21,7 @@ void send_message(struct PCB* source_process, int destination_process_pid, char*
     
     message->source_process = current_process;
     message->destination_process = destination_process;
+    message->type = message_type;
     strcpy(message->body, body);
 
     int push_ok = push_message(&destination_process->messages_buffer, message);
@@ -30,18 +31,18 @@ void send_message(struct PCB* source_process, int destination_process_pid, char*
     }
 }
 
-void receive_message(struct PCB* destination_process, char* body) {
-    // FIXME put process in wait instead of busy waiting
-    struct Message* received_message = allocate_kernel_page();
+void receive_message(struct PCB* destination_process, MessageType message_type, char* body) {
+    struct Message* received_message;
 
-    while (1) {
-        // print_circular_buffer(&destination_process->messages_buffer);
+    do {
         int pop_ok = pop_message(&destination_process->messages_buffer, received_message);
         if (pop_ok == 0) {
             break;
+        } else {
+            current_process->state = PROCESS_WAITING_MESSAGE;
         }
         schedule();
-    }
+    } while (1);
     strcpy(body, received_message->body);
 }
 
@@ -59,6 +60,13 @@ int push_message(struct MessagesCircularBuffer* buffer, struct Message* message)
 
     buffer->buffer[buffer->head] = *message;
     buffer->head = next_head;
+
+    // If the destination process is waiting for a message, I awake him
+    struct PCB* destination_process = message->destination_process;
+    if (destination_process->state == PROCESS_WAITING_MESSAGE) {
+        destination_process->state = PROCESS_RUNNING;
+        schedule();
+    }
 
     return 0;
 }

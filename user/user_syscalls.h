@@ -4,6 +4,7 @@
 #include "../libs/fat32/fat.h"
 #include "../libs/ipc.h"
 #include "../libs/syscalls.h"
+#include "../common/ipc_types.h"
 
 void call_syscall_write(char* buffer);
 unsigned long call_syscall_malloc();
@@ -23,7 +24,7 @@ void call_syscall_yield();
 int call_syscall_input(char* buffer, int len);
 int call_syscall_fork();
 
-void call_syscall_send_message(int destination_pid, char* body);
-void call_syscall_receive_message(char* body);
+void call_syscall_send_message(int destination_pid, MessageType message_type, char* body);
+void call_syscall_receive_message(MessageType message_type, char* body);
 
 #endif

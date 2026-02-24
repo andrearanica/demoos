@@ -34,6 +34,7 @@ struct cpu_context {
 
 #include "./fat32/fat.h"
 #include "./ipc.h"
+#include "../common/ipc_types.h"
 
 typedef enum { RESOURCE_TYPE_FILE, RESOURCE_TYPE_FOLDER } ResourceType;
 
@@ -62,6 +63,7 @@ struct mm_struct {
 struct Message {
     struct PCB* source_process;
     struct PCB* destination_process;
+    MessageType type;
     char body[MAX_MESSAGES_BODY_SIZE];
 };
 
@@ -92,6 +94,7 @@ struct PCB {
 #define PROCESS_RUNNING 1
 #define PROCESS_ZOMBIE 2
 #define PROCESS_WAITING_UART_INPUT 3
+#define PROCESS_WAITING_MESSAGE 4
 
 #define INIT_PROCESS {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 1, 1, 0, 0, 0, 0, {}, {0, 0, {}, 0, {}}}
 
