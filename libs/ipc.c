@@ -15,19 +15,85 @@ void send_message(struct PCB* source_process, int destination_process_pid, char*
     }
 
     if (destination_process == NULL) {
+        // FIXME put process in wait
         return -1;
     }
-
+    
     message->source_process = current_process;
     message->destination_process = destination_process;
     strcpy(message->body, body);
 
-    destination_process->arrived_messages[destination_process->n_arrived_messages] = message;
-    destination_process->n_arrived_messages = (destination_process->n_arrived_messages + 1) % MAX_MESSAGES_PER_PROCESS;
+    int push_ok = push_message(&destination_process->messages_buffer, message);
+    if (push_ok == -1) {
+        uart_puts("[DEBUG] Error pushing message\n");
+        return -1;
+    }
+}
 
-    uart_puts("[DEBUG] Message from "); 
-    uart_hex(message->source_process->pid);
-    uart_puts(" to ");
-    uart_hex(message->destination_process->pid);
-    uart_puts(" sent\n");
+void receive_message(struct PCB* destination_process, char* body) {
+    uart_puts("[DEBUG] Waiting for a message...\n");
+
+    // FIXME put process in wait instead of busy waiting
+    struct Message* received_message = NULL;
+
+    while (1) {
+        // print_circular_buffer(&destination_process->messages_buffer);
+        uart_puts("[DEBUG] Trying pop the message\n");
+        int pop_ok = pop_message(&destination_process->messages_buffer, received_message);
+        if (pop_ok == 0) {
+            break;
+        }
+        schedule();
+    }
+}
+
+// Pushes a message in the given circular buffer; return -1 if an error occoured
+int push_message(struct MessagesCircularBuffer* buffer, struct Message* message) {
+    int next_head = buffer->head + 1;
+    if (next_head >= MAX_MESSAGES_PER_PROCESS) {
+        next_head = 0;
+    }
+
+    if (next_head == buffer->tail) {
+        // It means that the buffer is full
+        return -1;
+    }
+
+    buffer->buffer[buffer->head] = *message;
+    buffer->head = next_head;
+
+    return 0;
+}
+
+// Pops the next message from the queue and puts in it message; returns -1 if an error occoured
+int pop_message(struct MessagesCircularBuffer* buffer, struct Message* message) {
+    if (buffer->head == buffer->tail) {
+        // The buffer is empty
+        return -1;
+    }
+
+    int next_tail = buffer->tail + 1;
+    if (next_tail >= MAX_MESSAGES_PER_PROCESS) {
+        next_tail = 0;
+    }
+
+    message->source_process = buffer->buffer[buffer->tail].source_process;
+    message->destination_process = buffer->buffer[buffer->tail].destination_process;
+    strcpy(message->body, buffer->buffer[buffer->tail].body);
+
+    buffer->tail = next_tail;
+
+    return 0;
+}
+
+void print_circular_buffer(struct MessagesCircularBuffer* buffer) {
+    uart_puts("[BUFFER] Head: "); uart_hex(buffer->head);
+    uart_puts("| Tail: "); uart_hex(buffer->tail);
+    uart_puts("\n");
+    for (int i = 0; i < MAX_MESSAGES_PER_PROCESS; i++) {
+        uart_hex(i);
+        uart_puts("\t");
+        uart_puts(buffer->buffer[i].body);
+        uart_puts("\n");
+    }
 }

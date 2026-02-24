@@ -1,15 +1,12 @@
 #ifndef __IPC_H
 #define __IPC_H
 
-#define BODY_MAX_SIZE 256
+#include "./scheduler.h"
 
-struct Message {
-    struct PCB* source_process;
-    struct PCB* destination_process;
-    char body[BODY_MAX_SIZE];
-};
+extern int push_message(struct MessagesCircularBuffer* buffer, struct Message* message);
+extern int pop_message(struct MessagesCircularBuffer* buffer, struct Message* message);
 
 void send_message(struct PCB* source_process, int destination_process_pid, char* body);
-void receive_message(struct Message*);
+void receive_message(struct PCB* destination_process, char* body);
 
 #endif

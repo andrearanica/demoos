@@ -408,16 +408,13 @@ void handle_write(char* buffer, char* working_directory) {
 void handle_fork() {
   int pid = call_syscall_fork();
   if (pid == 0) {
-    while (1) {
-      call_syscall_write("[SON]\n");
-      call_syscall_send_message(1, "Hi father, I am the son");
-      call_syscall_yield();
-    }
+    call_syscall_write("[SON] Sending message to father\n");
+    call_syscall_send_message(1, "Hi father, I am the son");
+    call_syscall_yield();
   } else {
-    while (1) {
-      call_syscall_write("[FATHER]\n");
-      call_syscall_send_message(2, "Hi son, I am the father");
-      call_syscall_yield();
-    }
+    call_syscall_write("[FATHER] Waiting process message...\n");
+    char buffer[256];
+    call_syscall_receive_message(buffer);
+    call_syscall_yield();
   }
 }

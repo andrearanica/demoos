@@ -12,6 +12,7 @@
 #define MAX_FILES_PER_PROCESS 16
 #define MAX_PROCESS_PAGES 16
 #define MAX_MESSAGES_PER_PROCESS 16
+#define MAX_MESSAGES_BODY_SIZE 256
 
 #define PF_KTHREAD 0x00000002
 
@@ -58,6 +59,18 @@ struct mm_struct {
     unsigned long kernel_pages[MAX_PROCESS_PAGES];
 };
 
+struct Message {
+    struct PCB* source_process;
+    struct PCB* destination_process;
+    char body[MAX_MESSAGES_BODY_SIZE];
+};
+
+struct MessagesCircularBuffer {
+  volatile int head;
+  volatile int tail;
+  struct Message buffer[MAX_MESSAGES_PER_PROCESS];
+};
+
 struct PCB {
   struct cpu_context cpu_context;
   long state;
@@ -73,8 +86,7 @@ struct PCB {
 
   struct mm_struct mm;
 
-  struct Message* arrived_messages[MAX_MESSAGES_PER_PROCESS];
-  int n_arrived_messages;
+  struct MessagesCircularBuffer messages_buffer;
 };
 
 #define PROCESS_RUNNING 1

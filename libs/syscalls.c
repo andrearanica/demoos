@@ -213,7 +213,7 @@ int syscall_send_message(int destination_pid, char* body) {
 }
 
 void syscall_receive_message(char* body) {
-  uart_puts("[DEBUG] Message received\n");
+  receive_message(current_process, body);
 }
 
 void *const sys_call_table[] = {
