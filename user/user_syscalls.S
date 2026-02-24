@@ -14,6 +14,8 @@
 .set SYSCALL_INPUT_NUMBER, 11
 .set SYSCALL_GET_NEXT_ENTRY_NUMBER, 12
 .set SYSCALL_FORK_NUMBER, 13
+.set SYSCALL_SEND_MESSAGE_NUMBER, 14
+.set SYSCALL_RECEIVE_MESSAGE_NUMBER, 15
 
 .globl call_syscall_write
 call_syscall_write:
@@ -110,6 +112,18 @@ call_syscall_get_next_entry:
 .globl call_syscall_fork
 call_syscall_fork:
     mov w8, #SYSCALL_FORK_NUMBER
+    svc #0
+    ret
+
+.globl call_syscall_send_message
+call_syscall_send_message:
+    mov w8, #SYSCALL_SEND_MESSAGE_NUMBER
+    svc #0
+    ret
+
+.globl call_syscall_receive_message
+call_syscall_receive_message:
+    mov w8, #SYSCALL_RECEIVE_MESSAGE_NUMBER
     svc #0
     ret
 

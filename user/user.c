@@ -23,9 +23,25 @@ void handle_show(char* buffer, char* working_directory);
 void handle_tree(char *buffer, char *working_directory);
 void print_tree(const char *path, int depth);
 void normalize_path(char* path);
+void handle_fork();
 
 void shell() {
   char working_directory[64] = "/";
+
+  char* ascii_art[6] = {
+    "________                        ________    _________",
+    "\\______ \\   ____   _____   ____ \\_____  \\  /   _____/",
+    " |    |  \\_/ __ \\ /     \\ /  _ \\ /   |   \\ \\_____  \\ ",
+    " |    `   \\  ___/|  Y Y  (  <_> )    |    \\/        \\",
+    "/_______  /\\___  >__|_|  /\\____/\\_______  /_______  /",
+    "        \\/     \\/      \\/               \\/        \\/ "
+  };
+
+  for (int i = 0; i < 6; i++) {
+    call_syscall_write(ascii_art[i]);
+    call_syscall_write("\n");
+  }
+
   while (1) {
     call_syscall_write(UART_GREEN_COLOR);
     call_syscall_write("demoos:\0");
@@ -58,6 +74,8 @@ void shell() {
       handle_write(buffer, working_directory);
     } else if (memcmp(buffer, "show", 4) == 0) {
       handle_show(buffer, working_directory);
+    } else if (memcmp(buffer, "fork", 4) == 0) {
+      handle_fork();
     } else {
       call_syscall_write("[SHELL] Command '\0");
       call_syscall_write(buffer);
@@ -301,6 +319,7 @@ void print_tree(const char *path, int depth) {
     }
   }
 }
+
 void handle_tree(char *buffer, char *working_directory) {
   char command[32] = {0};
   char target[64] = {0};
@@ -384,4 +403,21 @@ void handle_write(char* buffer, char* working_directory) {
   }
 
   call_syscall_close_file(fd);
+}
+
+void handle_fork() {
+  int pid = call_syscall_fork();
+  if (pid == 0) {
+    while (1) {
+      call_syscall_write("[SON]\n");
+      call_syscall_send_message(1, "Hi father, I am the son");
+      call_syscall_yield();
+    }
+  } else {
+    while (1) {
+      call_syscall_write("[FATHER]\n");
+      call_syscall_send_message(2, "Hi son, I am the father");
+      call_syscall_yield();
+    }
+  }
 }

@@ -11,6 +11,7 @@
 
 #define MAX_FILES_PER_PROCESS 16
 #define MAX_PROCESS_PAGES 16
+#define MAX_MESSAGES_PER_PROCESS 16
 
 #define PF_KTHREAD 0x00000002
 
@@ -31,6 +32,7 @@ struct cpu_context {
 };
 
 #include "./fat32/fat.h"
+#include "./ipc.h"
 
 typedef enum { RESOURCE_TYPE_FILE, RESOURCE_TYPE_FOLDER } ResourceType;
 
@@ -70,6 +72,9 @@ struct PCB {
   FatResource *files[16];
 
   struct mm_struct mm;
+
+  struct Message* arrived_messages[MAX_MESSAGES_PER_PROCESS];
+  int n_arrived_messages;
 };
 
 #define PROCESS_RUNNING 1
