@@ -31,20 +31,18 @@ void send_message(struct PCB* source_process, int destination_process_pid, char*
 }
 
 void receive_message(struct PCB* destination_process, char* body) {
-    uart_puts("[DEBUG] Waiting for a message...\n");
-
     // FIXME put process in wait instead of busy waiting
-    struct Message* received_message = NULL;
+    struct Message* received_message = allocate_kernel_page();
 
     while (1) {
         // print_circular_buffer(&destination_process->messages_buffer);
-        uart_puts("[DEBUG] Trying pop the message\n");
         int pop_ok = pop_message(&destination_process->messages_buffer, received_message);
         if (pop_ok == 0) {
             break;
         }
         schedule();
     }
+    strcpy(body, received_message->body);
 }
 
 // Pushes a message in the given circular buffer; return -1 if an error occoured
