@@ -162,7 +162,16 @@ address)
 to a process; it finds the first free page, maps it into the process page tables
 and then returns the *kernel* virtual address of the page. 
 
-### System calls
+### IPC
+
+Processes can communicate by sending messages. There are two type of messages:
+
+- Raw messages: simple messages sent by a process to another to exchange data
+as a char buffer
+- Signals (not working yet): messages which are intercepted and handled by the
+kernel
+
+## System calls
 
 Each user process can invoke a system call to ask the kernel to perform a 
 particular operation. When a process calls a system calls, the kernel generates 
@@ -183,11 +192,30 @@ Let's see the flow of a system call invocation from the user process:
 - This function prints on the UART the passed text
 - Then, kernel exits and the control returns to the process
 
-### IPC
+#### IO
 
-Processes can communicate by sending messages. There are two type of messages:
+| Function name                                                                | Description |
+| -------------                                                                | ----------- |
+| `syscall_write(char* buffer)`                                                | Writes the given buffer into the UART |
+| `syscall_input(char* buffer, int len)`                                       | Reads a buffer from the UART and stores it in the passed buffer |
+| `syscall_create_dir(char* dir_path)`                                         | Creates a new directory in the filesystem and returns its file descriptor |
+| `syscall_open_dir(char dir_path*)`                                           | Opens the given directory and returns its file descriptor |
+| `syscall_open_file(char* file_path, uint8_t flags)`                          | Opens the given file and returns its file descriptor |
+| `syscall_close_file(int file_descriptor)`                                    | Closes the file with the given file descriptor 
+| `syscall_write_file(int file_descriptor, char* buffer, int len, int* bytes)` | Writes the given content in the file with the given file descriptor; bytes will be the number of written bytes |
+| `syscall_read_file(int file_descriptor, char* buffer, int len, int* bytes)`  | Reads the content of the open file with the given descriptor and puts it into the given buffer; bytes will be the number of read bytes |
 
-- Raw messages: simple messages sent by a process to another to exchange data
-as a char buffer
-- Signals (not working yet): messages which are intercepted and handled by the
-kernel
+#### Memory
+
+| Function name                          | Description |
+| -------------                          | ----------- |
+| `syscall_malloc()`                     | Gets the first free page and allocates it for the kernel; returns the kernel address of the page |
+
+#### Process
+
+| Function name     | Description |
+| -------------     | ----------- |
+| `syscall_exit()`  | Terminates the current process |
+| `syscall_fork()`  | Creates a copy of the current process and returns its PID |
+| `syscall_yield()` | Forces the scheduler to assign the CPU to a new process |
+| `syscall_send_message(int destination_pid, MessageType message_type, char* body)` | Sends a message to another process |
