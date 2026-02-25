@@ -8,6 +8,7 @@
 #include "./fat32/fat.h"
 #include "./ipc.h"
 #include "../common/ipc_types.h"
+#include "../common/fat_types.h"
 
 void syscall_write(char* buffer);
 int syscall_copy_process();
@@ -23,11 +24,6 @@ int syscall_fork();
 int syscall_send_message(int destination_pid, MessageType message_type, char* body);
 void syscall_receive_message(MessageType message_type, char* body);
 
-typedef struct {
-    uint32_t size;
-    char name[64];
-    bool is_dir;
-} FatEntryInfo;
 int syscall_get_next_entry(int file_descriptor, FatEntryInfo* entry_info);
 
 #endif

@@ -204,6 +204,7 @@ Let's see the flow of a system call invocation from the user process:
 | `syscall_close_file(int file_descriptor)`                                    | Closes the file with the given file descriptor 
 | `syscall_write_file(int file_descriptor, char* buffer, int len, int* bytes)` | Writes the given content in the file with the given file descriptor; bytes will be the number of written bytes |
 | `syscall_read_file(int file_descriptor, char* buffer, int len, int* bytes)`  | Reads the content of the open file with the given descriptor and puts it into the given buffer; bytes will be the number of read bytes |
+| `syscall_get_next_entry(int file_descriptor, FatEntryInfo* entry_info)`      | Saves into `entry_info` the info about the entry, and then increases the pointer in the directory |
 
 #### Memory
 
