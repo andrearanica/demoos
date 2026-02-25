@@ -23,6 +23,8 @@ sudo apt-get install qemu-system-arm
 
 Inoltre, per usare il filesystem è necessario creare un disco virtuale usando i seguenti comandi. 
 ``` bash
+sudo apt-get install dosfstools
+
 dd if=/dev/zero of=disk.img bs=1M count=64
 
 parted disk.img --script mklabel msdos
@@ -33,9 +35,9 @@ sudo losetup -fP disk.img
 
 lsblk # cerca il device in cui è stato montato il disco
 
-sudo mkfs.fat -F 32 /dev/loopXp1
+sudo mkfs.fat -F 32 /dev/loop0p1 # sostituisci loop0p1 con quello in cui è stato montato
 
-sudo losetup -d /dev/loopX
+sudo losetup -d /dev/loop0
 ```
 
 ## Compilazione ed Esecuzione

@@ -2,6 +2,7 @@
 #include "user_syscalls.h"
 #include "../common/string.h"
 #include "../common/memory.h"
+#include "../common/ipc_types.h"
 
 #define UART_NORMAL_COLOR "\x1B[0m\0"
 #define UART_RED_COLOR "\x1B[31m\0"
@@ -23,9 +24,28 @@ void handle_show(char* buffer, char* working_directory);
 void handle_tree(char *buffer, char *working_directory);
 void print_tree(const char *path, int depth);
 void normalize_path(char* path);
+void handle_fork_and_messages();
+void handle_signals();
 
 void shell() {
   char working_directory[64] = "/";
+
+  char* ascii_art[6] = {
+    "▄▄▄▄▄▄                          ▄▄▄▄▄    ▄▄▄▄▄▄▄ ",
+    "███▀▀██▄                      ▄███████▄ █████▀▀▀ ",
+    "███  ███ ▄█▀█▄ ███▄███▄ ▄███▄ ███   ███  ▀████▄  ",
+    "███  ███ ██▄█▀ ██ ██ ██ ██ ██ ███▄▄▄███    ▀████ ",
+    "██████▀  ▀█▄▄▄ ██ ██ ██ ▀███▀  ▀█████▀  ███████▀ ",
+  };
+
+  call_syscall_write(UART_GREEN_COLOR);
+  for (int i = 0; i < 5; i++) {
+    call_syscall_write(ascii_art[i]);
+    call_syscall_write("\n");
+  }
+  call_syscall_write(UART_WHITE_COLOR);
+  call_syscall_write("\n");
+
   while (1) {
     call_syscall_write(UART_GREEN_COLOR);
     call_syscall_write("demoos:\0");
@@ -58,6 +78,10 @@ void shell() {
       handle_write(buffer, working_directory);
     } else if (memcmp(buffer, "show", 4) == 0) {
       handle_show(buffer, working_directory);
+    } else if (memcmp(buffer, "fork", 4) == 0) {
+      handle_fork_and_messages();
+    } else if (memcmp(buffer, "signals", 7) == 0) {
+      handle_signals();
     } else {
       call_syscall_write("[SHELL] Command '\0");
       call_syscall_write(buffer);
@@ -79,6 +103,8 @@ void handle_help() {
     call_syscall_write("  write      - Creates a file and writes the given content in it\n\0");
     call_syscall_write("  show       - Shows the content of the given file\n\0");
     call_syscall_write("  clear      - Clears the screen\n\0");
+    call_syscall_write("  fork       - Forks the current process, and the new one will send a message to the father\n\0");
+    call_syscall_write("  signals    - Tests the signals by creating and killing a process\n\0");
 }
 
 void handle_ls(char *buffer, char *working_directory) {
@@ -301,6 +327,7 @@ void print_tree(const char *path, int depth) {
     }
   }
 }
+
 void handle_tree(char *buffer, char *working_directory) {
   char command[32] = {0};
   char target[64] = {0};
@@ -384,4 +411,35 @@ void handle_write(char* buffer, char* working_directory) {
   }
 
   call_syscall_close_file(fd);
+}
+
+void handle_fork_and_messages() {
+  int pid = call_syscall_fork();
+  if (pid == 0) {
+    call_syscall_write("[SON] Sending message to father\n");
+    call_syscall_send_message(1, MESSAGE_TYPE_RAW, "Hi father, I am the son\n");
+    call_syscall_yield();
+    call_syscall_exit();
+  } else {
+    call_syscall_write("[FATHER] Waiting process message...\n");
+    char buffer[256];
+    call_syscall_receive_message(MESSAGE_TYPE_RAW, buffer);
+    call_syscall_write("[FATHER] Message received from SON: ");
+    call_syscall_write(buffer);
+  }
+}
+
+void handle_signals() {
+  int pid = call_syscall_fork();
+  if (pid == 0) {
+    call_syscall_write("[SON] Started...\n");
+    while (1) {
+      call_syscall_write("[SON] I am the son and I'm using the CPU just for fun\n");
+      call_syscall_yield();
+    }
+    call_syscall_write("[SON] This line should never be printed\n");
+  } else {
+    call_syscall_write("[FATHER] I forked myself but I want to terminate it\n");
+    call_syscall_send_message(pid, MESSAGE_TYPE_SIGNAL, NULL);
+  }
 }

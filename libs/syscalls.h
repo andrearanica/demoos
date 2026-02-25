@@ -1,11 +1,13 @@
 #ifndef __SYSCALLS_H
 #define __SYSCALLS_H
 
-#define __NR_SYSCALLS 14
+#define __NR_SYSCALLS 16
 
 #ifndef __ASSEMBLER__
 
 #include "./fat32/fat.h"
+#include "./ipc.h"
+#include "../common/ipc_types.h"
 
 void syscall_write(char* buffer);
 int syscall_copy_process();
@@ -18,6 +20,8 @@ int syscall_read_file(int file_descriptor, char* buffer, int len, int* bytes);
 void syscall_yield();
 int syscall_input(char* buffer, int len);
 int syscall_fork();
+int syscall_send_message(int destination_pid, MessageType message_type, char* body);
+void syscall_receive_message(MessageType message_type, char* body);
 
 typedef struct {
     uint32_t size;

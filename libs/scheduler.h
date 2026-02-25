@@ -11,6 +11,8 @@
 
 #define MAX_FILES_PER_PROCESS 16
 #define MAX_PROCESS_PAGES 16
+#define MAX_MESSAGES_PER_PROCESS 16
+#define MAX_MESSAGES_BODY_SIZE 256
 
 #define PF_KTHREAD 0x00000002
 
@@ -31,6 +33,8 @@ struct cpu_context {
 };
 
 #include "./fat32/fat.h"
+#include "./ipc.h"
+#include "../common/ipc_types.h"
 
 typedef enum { RESOURCE_TYPE_FILE, RESOURCE_TYPE_FOLDER } ResourceType;
 
@@ -56,6 +60,19 @@ struct mm_struct {
     unsigned long kernel_pages[MAX_PROCESS_PAGES];
 };
 
+struct Message {
+    struct PCB* source_process;
+    struct PCB* destination_process;
+    MessageType type;
+    char body[MAX_MESSAGES_BODY_SIZE];
+};
+
+struct MessagesCircularBuffer {
+  volatile int head;
+  volatile int tail;
+  struct Message buffer[MAX_MESSAGES_PER_PROCESS];
+};
+
 struct PCB {
   struct cpu_context cpu_context;
   long state;
@@ -70,11 +87,14 @@ struct PCB {
   FatResource *files[16];
 
   struct mm_struct mm;
+
+  struct MessagesCircularBuffer messages_buffer;
 };
 
 #define PROCESS_RUNNING 1
 #define PROCESS_ZOMBIE 2
 #define PROCESS_WAITING_UART_INPUT 3
+#define PROCESS_WAITING_MESSAGE 4
 
 #define INIT_PROCESS {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 1, 1, 0, 0, 0, 0, {}, {0, 0, {}, 0, {}}}
 

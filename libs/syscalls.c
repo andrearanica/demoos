@@ -69,7 +69,7 @@ int syscall_open_dir(const char *dir_relative_path) {
     return -1;
   }
 
-  current_process->files[file_descriptor] = (FatResource *)allocate_kernel_page();
+  current_process->files[file_descriptor] = (FatResource*)allocate_kernel_page();
   current_process->files[file_descriptor]->resource_type = RESOURCE_TYPE_FOLDER;
   current_process->files[file_descriptor]->d = dir;
 
@@ -204,10 +204,27 @@ int syscall_fork() {
   return pid;
 }
 
+int syscall_send_message(int destination_pid, MessageType message_type, char* body) {
+  unsigned long address = allocate_kernel_page();
+  
+  if (message_type == MESSAGE_TYPE_RAW) {
+    send_message(current_process, destination_pid, message_type, body);
+  } else {
+    uart_puts("[KERNEL] Message received from the kernel\n");
+  }
+
+  return 0;
+}
+
+void syscall_receive_message(MessageType message_type, char* body) {
+  receive_message(current_process, message_type, body);
+}
+
 void *const sys_call_table[] = {
     syscall_write,          syscall_malloc,     syscall_clone,
     syscall_exit,           syscall_create_dir, syscall_open_dir,
     syscall_open_file,      syscall_close_file, syscall_write_file,
     syscall_read_file,      syscall_yield,      syscall_input,
     syscall_get_next_entry, syscall_fork,
+    syscall_send_message,   syscall_receive_message
 };
