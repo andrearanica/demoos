@@ -319,6 +319,10 @@ functions to generate the SVC exception to invoke the system calls. </p>
 <td><code>syscall_read_file(int file_descriptor, char* buffer, int len, int* bytes)</code></td>
 <td>Reads the content of the open file with the given descriptor and puts it into the given buffer; bytes will be the number of read bytes</td>
 </tr>
+<tr>
+<td><code>syscall_get_next_entry(int file_descriptor, FatEntryInfo* entry_info)</code></td>
+<td>Saves into <code>entry_info</code> the info about the entry, and then increases the pointer in the directory</td>
+</tr>
 </tbody>
 </table>
 <h4 id="memory">Memory</h4>
