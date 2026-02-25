@@ -65,7 +65,7 @@ int move_to_user_mode(unsigned long start, unsigned long size, unsigned long pc)
 
   regs->pstate = PSR_MODE_EL0t;
   regs->pc = pc;
-  regs->sp = 2 * PAGE_SIZE;
+  regs->sp = 16 * PAGE_SIZE;
 
   unsigned long copied_bytes = 0;
   for (int i = 0; i < 16; i++) {
