@@ -3,18 +3,18 @@
 <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/andrearanica/demoos/installation/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://github.com/andrearanica/demoos/code/" />
       <link rel="shortcut icon" href="../img/favicon.ico" />
-    <title>Installation - DemoOS documentation</title>
+    <title>Code structure - DemoOS documentation</title>
     <link rel="stylesheet" href="../css/theme.css" />
     <link rel="stylesheet" href="../css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
     
       <script>
         // Current page data
-        var mkdocs_page_name = "Installation";
-        var mkdocs_page_input_path = "installation.md";
-        var mkdocs_page_url = "/andrearanica/demoos/installation/";
+        var mkdocs_page_name = "Code structure";
+        var mkdocs_page_input_path = "code.md";
+        var mkdocs_page_url = "/andrearanica/demoos/code/";
       </script>
     
     <!--[if lt IE 9]>
@@ -43,18 +43,20 @@
                 <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
                 </li>
               </ul>
-              <ul class="current">
-                <li class="toctree-l1 current"><a class="reference internal current" href="#">Installation</a>
-    <ul class="current">
-    </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../installation/">Installation</a>
                 </li>
               </ul>
               <ul>
                 <li class="toctree-l1"><a class="reference internal" href="../functionalities/">Functionalities</a>
                 </li>
               </ul>
-              <ul>
-                <li class="toctree-l1"><a class="reference internal" href="../code/">Code structure</a>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Code structure</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#folders">Folders</a>
+    </li>
+    </ul>
                 </li>
               </ul>
       </div>
@@ -71,7 +73,7 @@
         <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
     <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
-      <li class="breadcrumb-item active">Installation</li>
+      <li class="breadcrumb-item active">Code structure</li>
     <li class="wy-breadcrumbs-aside">
     </li>
   </ul>
@@ -80,56 +82,25 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
             <div class="section" itemprop="articleBody">
               
-                <h1 id="installation">Installation</h1>
-<p>Before running DemoOS, be sure to install the following packages, which will let you compile and run the operating system on the virtual machine. </p>
-<pre><code class="language-bash">sudo apt-get install build-essential
-
-sudo apt-get install gcc-aarch64-linux-gnu
-sudo ln -s $(which aarch64-linux-gnu-gcc) /usr/local/bin/aarch64-elf-gcc
-
-sudo apt-get install binutils-aarch64-linux-gnu
-sudo ln -s $(which aarch64-linux-gnu-ld) /usr/local/bin/aarch64-elf-ld
-
-sudo apt-get install binutils-aarch64-linux-gnu
-sudo ln -s $(which aarch64-linux-gnu-objcopy) /usr/local/bin/aarch64-elf-objcopy
-
-sudo apt-get install binutils-aarch64-linux-gnu
-sudo ln -s $(which aarch64-linux-gnu-ld) /usr/local/bin/aarch64-elf-ld
-
-sudo apt-get install qemu-system-arm
-</code></pre>
-<p>You also need to follow these steps to create a virtual disk that will let you use the file system.</p>
-<pre><code class="language-bash">sudo apt-get install dosfstools
-
-dd if=/dev/zero of=disk.img bs=1M count=64
-
-parted disk.img --script mklabel msdos
-
-parted disk.img --script mkpart primary fat32 1MiB 100%
-
-sudo losetup -fP disk.img
-
-lsblk
-
-# Substitute loop0p1 with the device in which the virtual disk has been mounted
-sudo mkfs.fat -F 32 /dev/loop0p1
-
-sudo losetup -d /dev/loop0
-</code></pre>
-<p>When all the packages will be installed and the virtual disk will be ready, you'll have everything you need to run DemoOS. </p>
-<pre><code class="language-bash"># Compiles everything and generates the kernel binary
-make
-# Runs the compiled files into a virtual machine in qemu
-make run
-# Clears the compiled file, so you can run another build from zero
-make clean
-</code></pre>
+                <h1 id="code-structure">Code structure</h1>
+<p>This section will explain in details each section of the operating system, how they work and all the important details. </p>
+<h2 id="folders">Folders</h2>
+<p>The project is divided into different folders:</p>
+<ul>
+<li><code>arch</code>: header files which contain data about CPU registers, memory mapped registers addresses...</li>
+<li><code>boot</code>: the bootloader, stored in the <code>start.S</code> file</li>
+<li><code>common</code>: libraries (<code>.h</code> and <code>.c</code> files) which are shared between kernel and user processes; in fact, there are some functions (like string and memory manipulation) which are used by the kernel, but which can also used by the user processes without any security issue, thanks to virtual memory</li>
+<li><code>drivers</code>: drivers for the devices supported by demoos (uart, irq, sd...)</li>
+<li><code>kernel</code>: the <code>kernel.c</code> is the main file launched by the bootloader, which initializes the components of the OS and the init process</li>
+<li><code>libs</code>: miscellaneous files which are used by the kernel for its functionalities</li>
+<li><code>script</code>: the linker script used in the building process</li>
+<li><code>user</code>: the init user process, which is a shell</li>
+</ul>
               
             </div>
           </div><footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
-        <a href=".." class="btn btn-neutral float-left" title="Home"><span class="icon icon-circle-arrow-left"></span> Previous</a>
-        <a href="../functionalities/" class="btn btn-neutral float-right" title="Functionalities">Next <span class="icon icon-circle-arrow-right"></span></a>
+        <a href="../functionalities/" class="btn btn-neutral float-left" title="Functionalities"><span class="icon icon-circle-arrow-left"></span> Previous</a>
     </div>
 
   <hr/>
@@ -152,10 +123,8 @@ make clean
   <span class="rst-current-version" data-toggle="rst-current-version">
     
     
-      <span><a href=".." style="color: #fcfcfc">&laquo; Previous</a></span>
+      <span><a href="../functionalities/" style="color: #fcfcfc">&laquo; Previous</a></span>
     
-    
-      <span><a href="../functionalities/" style="color: #fcfcfc">Next &raquo;</a></span>
     
   </span>
 </div>
