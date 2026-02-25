@@ -74,9 +74,17 @@
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#memory-management">Memory management</a>
     </li>
-    <li class="toctree-l3"><a class="reference internal" href="#system-calls">System calls</a>
-    </li>
     <li class="toctree-l3"><a class="reference internal" href="#ipc">IPC</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#system-calls">System calls</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#io">IO</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#memory">Memory</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#process">Process</a>
     </li>
         </ul>
     </li>
@@ -245,7 +253,15 @@ address)</li>
 to a process; it finds the first free page, maps it into the process page tables
 and then returns the <em>kernel</em> virtual address of the page. </li>
 </ul>
-<h3 id="system-calls">System calls</h3>
+<h3 id="ipc">IPC</h3>
+<p>Processes can communicate by sending messages. There are two type of messages:</p>
+<ul>
+<li>Raw messages: simple messages sent by a process to another to exchange data
+as a char buffer</li>
+<li>Signals (not working yet): messages which are intercepted and handled by the
+kernel</li>
+</ul>
+<h2 id="system-calls">System calls</h2>
 <p>Each user process can invoke a system call to ask the kernel to perform a 
 particular operation. When a process calls a system calls, the kernel generates 
 an SVC exception; the <code>entry.S</code> file intercepts the exception, then calls the 
@@ -262,14 +278,91 @@ functions to generate the SVC exception to invoke the system calls. </p>
 - The <code>entry.S</code> calls the function stored at the <code>0</code> position
 - This function prints on the UART the passed text
 - Then, kernel exits and the control returns to the process</p>
-<h3 id="ipc">IPC</h3>
-<p>Processes can communicate by sending messages. There are two type of messages:</p>
-<ul>
-<li>Raw messages: simple messages sent by a process to another to exchange data
-as a char buffer</li>
-<li>Signals (not working yet): messages which are intercepted and handled by the
-kernel</li>
-</ul>
+<h4 id="io">IO</h4>
+<table>
+<thead>
+<tr>
+<th>Function name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>syscall_write(char* buffer)</code></td>
+<td>Writes the given buffer into the UART</td>
+</tr>
+<tr>
+<td><code>syscall_input(char* buffer, int len)</code></td>
+<td>Reads a buffer from the UART and stores it in the passed buffer</td>
+</tr>
+<tr>
+<td><code>syscall_create_dir(char* dir_path)</code></td>
+<td>Creates a new directory in the filesystem and returns its file descriptor</td>
+</tr>
+<tr>
+<td><code>syscall_open_dir(char dir_path*)</code></td>
+<td>Opens the given directory and returns its file descriptor</td>
+</tr>
+<tr>
+<td><code>syscall_open_file(char* file_path, uint8_t flags)</code></td>
+<td>Opens the given file and returns its file descriptor</td>
+</tr>
+<tr>
+<td><code>syscall_close_file(int file_descriptor)</code></td>
+<td>Closes the file with the given file descriptor</td>
+</tr>
+<tr>
+<td><code>syscall_write_file(int file_descriptor, char* buffer, int len, int* bytes)</code></td>
+<td>Writes the given content in the file with the given file descriptor; bytes will be the number of written bytes</td>
+</tr>
+<tr>
+<td><code>syscall_read_file(int file_descriptor, char* buffer, int len, int* bytes)</code></td>
+<td>Reads the content of the open file with the given descriptor and puts it into the given buffer; bytes will be the number of read bytes</td>
+</tr>
+</tbody>
+</table>
+<h4 id="memory">Memory</h4>
+<table>
+<thead>
+<tr>
+<th>Function name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>syscall_malloc()</code></td>
+<td>Gets the first free page and allocates it for the kernel; returns the kernel address of the page</td>
+</tr>
+</tbody>
+</table>
+<h4 id="process">Process</h4>
+<table>
+<thead>
+<tr>
+<th>Function name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>syscall_exit()</code></td>
+<td>Terminates the current process</td>
+</tr>
+<tr>
+<td><code>syscall_fork()</code></td>
+<td>Creates a copy of the current process and returns its PID</td>
+</tr>
+<tr>
+<td><code>syscall_yield()</code></td>
+<td>Forces the scheduler to assign the CPU to a new process</td>
+</tr>
+<tr>
+<td><code>syscall_send_message(int destination_pid, MessageType message_type, char* body)</code></td>
+<td>Sends a message to another process</td>
+</tr>
+</tbody>
+</table>
               
             </div>
           </div><footer>
