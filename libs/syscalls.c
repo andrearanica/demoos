@@ -205,8 +205,6 @@ int syscall_fork() {
 }
 
 int syscall_send_message(int destination_pid, MessageType message_type, char* body) {
-  unsigned long address = allocate_kernel_page();
-  
   if (message_type == MESSAGE_TYPE_RAW) {
     send_message(current_process, destination_pid, message_type, body);
   } else {

@@ -115,20 +115,20 @@ void handle_ls(char *buffer, char *working_directory) {
     call_syscall_write("'.\n\0");
   }
 
-  FatEntryInfo *info;
+  FatEntryInfo info;
   while (1) {
-      memset(info->name, 0, 64);
-      int result = call_syscall_get_next_entry(fd, info);
+      memset(info.name, 0, 64);
+      int result = call_syscall_get_next_entry(fd, &info);
       if (result != 1) {
           break;
       }
 
-      if (info->is_dir) {
+      if (info.is_dir) {
           call_syscall_write("\x1b[34m\0");
-          call_syscall_write(info->name);
+          call_syscall_write(info.name);
           call_syscall_write("\x1b[0m\0");
       } else {
-          call_syscall_write(info->name);
+          call_syscall_write(info.name);
       }
 
       call_syscall_write("\n");
@@ -289,7 +289,7 @@ void normalize_path(char* path) {
 }
 
 void print_tree(const char *path, int depth) {
-  int fd = call_syscall_open_dir(path);
+  int fd = call_syscall_open_dir((char*)path);
   if (fd == -1) {
     return;
   }

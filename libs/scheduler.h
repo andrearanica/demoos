@@ -33,7 +33,6 @@ struct cpu_context {
 };
 
 #include "./fat32/fat.h"
-#include "./ipc.h"
 #include "../common/ipc_types.h"
 
 typedef enum { RESOURCE_TYPE_FILE, RESOURCE_TYPE_FOLDER } ResourceType;
@@ -81,7 +80,6 @@ struct PCB {
   int preempt_disabled;
   long pid;
 
-  unsigned long stack;
   unsigned long flags;
 
   FatResource *files[16];
@@ -96,7 +94,7 @@ struct PCB {
 #define PROCESS_WAITING_UART_INPUT 3
 #define PROCESS_WAITING_MESSAGE 4
 
-#define INIT_PROCESS {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 1, 1, 0, 0, 0, 0, {}, {0, 0, {}, 0, {}}}
+#define INIT_PROCESS {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 1, 1, 0, 0, 0, {}, {0, 0, {}, 0, {}}, {}}
 
 extern struct PCB *current_process;
 extern struct PCB *processes[N_PROCESSES];

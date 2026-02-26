@@ -1,10 +1,8 @@
 #ifndef __USER_SYSCALLS_H
 #define __USER_SYSCALLS_H
 
-#include "../libs/fat32/fat.h"
-#include "../libs/ipc.h"
-#include "../libs/syscalls.h"
 #include "../common/ipc_types.h"
+#include "../common/fat_types.h"
 
 void call_syscall_write(char* buffer);
 unsigned long call_syscall_malloc();
@@ -17,7 +15,6 @@ int call_syscall_open_file(char* file_realtive_path, uint8_t flags);
 int call_syscall_close_file(int file_descriptor);
 int call_syscall_write_file(int file_descriptor, char* buffer, int len, int* bytes);
 int call_syscall_read_file(int file_descriptor, char* buffer, int len, int* bytes);
-// FIXME use another parameter instead of FatEntryInfo which is a kernel struct
 int call_syscall_get_next_entry(int file_descriptor, FatEntryInfo* entry_info);
 
 void call_syscall_yield();

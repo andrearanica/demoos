@@ -95,10 +95,6 @@ void exit_process() {
     }
   }
 
-  if (current_process->stack) {
-    free_page(current_process->stack);
-  }
-
   preempt_enable();
   schedule();
 }

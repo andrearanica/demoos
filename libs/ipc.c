@@ -2,6 +2,7 @@
 #include "scheduler.h"
 #include "../drivers/uart/uart.h"
 #include "./allocator.h"
+#include "../common/string.h"
 #include <stddef.h>
 
 void send_message(struct PCB* source_process, int destination_process_pid, MessageType message_type, char* body) {
@@ -16,7 +17,7 @@ void send_message(struct PCB* source_process, int destination_process_pid, Messa
 
     if (destination_process == NULL) {
         // FIXME put process in wait
-        return -1;
+        return;
     }
     
     message->source_process = current_process;
@@ -27,15 +28,15 @@ void send_message(struct PCB* source_process, int destination_process_pid, Messa
     int push_ok = push_message(&destination_process->messages_buffer, message);
     if (push_ok == -1) {
         uart_puts("[DEBUG] Error pushing message\n");
-        return -1;
+        return;
     }
 }
 
 void receive_message(struct PCB* destination_process, MessageType message_type, char* body) {
-    struct Message* received_message;
+    struct Message received_message;
 
     do {
-        int pop_ok = pop_message(&destination_process->messages_buffer, received_message);
+        int pop_ok = pop_message(&destination_process->messages_buffer, &received_message);
         if (pop_ok == 0) {
             break;
         } else {
@@ -43,7 +44,7 @@ void receive_message(struct PCB* destination_process, MessageType message_type, 
         }
         schedule();
     } while (1);
-    strcpy(body, received_message->body);
+    strcpy(body, received_message.body);
 }
 
 // Pushes a message in the given circular buffer; return -1 if an error occoured
