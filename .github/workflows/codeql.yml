@@ -28,10 +28,10 @@ jobs:
 
     - name: Setup Toolchain Symlinks
       run: |
-        sudo ln -s $(which aarch64-linux-gnu-gcc) /usr/local/bin/aarch64-elf-gcc
-        sudo ln -s $(which aarch64-linux-gnu-ld) /usr/local/bin/aarch64-elf-ld
-        sudo ln -s $(which aarch64-linux-gnu-objcopy) /usr/local/bin/aarch64-elf-objcopy
-        sudo ln -s $(which aarch64-linux-gnu-ld) /usr/local/bin/aarch64-elf-ld
+        sudo ln -s -f $(which aarch64-linux-gnu-gcc) /usr/local/bin/aarch64-elf-gcc
+        sudo ln -s -f $(which aarch64-linux-gnu-ld) /usr/local/bin/aarch64-elf-ld
+        sudo ln -s -f $(which aarch64-linux-gnu-objcopy) /usr/local/bin/aarch64-elf-objcopy
+        sudo ln -s -f $(which aarch64-linux-gnu-ld) /usr/local/bin/aarch64-elf-ld
 
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v3
