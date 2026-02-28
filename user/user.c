@@ -155,7 +155,7 @@ void handle_mkdir(char *buffer, char *working_directory) {
   char temp[64];
   memset(temp, 0, 64);
 
-  if (strlen(temp) < 64) {
+  if (strlen(working_directory) < 64) {
     strcat(temp, working_directory);
   } else {
     return;
@@ -174,8 +174,8 @@ void handle_mkdir(char *buffer, char *working_directory) {
 }
 
 void handle_cd(char *buffer, char *working_directory) {
-  char command[32] = {0};
-  char destination[32] = {0};
+  char command[MAX_PATH] = {0};
+  char destination[MAX_PATH] = {0};
   char temp[MAX_PATH] = {0};
 
   strsplit(buffer, ' ', command, destination);

@@ -16,5 +16,4 @@ void handle_timer_irq(void) {
   curVal += interval;
   mmio_write(TIMER_C1, curVal);
   handle_timer_tick();
-  // uart_puts("Timer interrupt received\r\n");
 }

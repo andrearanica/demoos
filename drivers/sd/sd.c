@@ -187,8 +187,6 @@ int sd_execute_command(unsigned int code, unsigned int arg) {
     sd_err = SD_TIMEOUT;
     return 0;
   }
-  // uart_puts("EMMC: Sending command ");uart_hex(code);uart_puts(" arg
-  // ");uart_hex(arg);uart_puts("\n");
   *EMMC_INTERRUPT = *EMMC_INTERRUPT;
   *EMMC_ARG1 = arg;
   *EMMC_CMDTM = code;
@@ -234,8 +232,6 @@ int sd_readblock(unsigned int lba, unsigned char *buffer, unsigned int num) {
   int r, c = 0, d;
   if (num < 1)
     num = 1;
-  // uart_puts("sd_readblock lba ");uart_hex(lba);uart_puts(" num
-  // ");uart_hex(num);uart_puts("\n");
   if (sd_status(SR_DAT_INHIBIT)) {
     sd_err = SD_TIMEOUT;
     return 0;
@@ -328,8 +324,6 @@ int sd_set_clock(unsigned int f) {
     d = 2;
     s = 0;
   }
-  // uart_puts("sd_set_clock divisor ");uart_hex(d);uart_puts(", shift
-  // ");uart_hex(s);uart_puts("\n");
   if (sd_hv > HOST_SPEC_V2)
     h = (d & 0x300) >> 2;
   d = (((d & 0x0ff) << 8) | h);
@@ -355,8 +349,6 @@ int sd_writeblock(unsigned char *buffer, unsigned int lba, unsigned int num) {
   int r, c = 0, d;
   if (num < 1)
     num = 1;
-  // uart_puts("sd_writeblock lba ");uart_hex(lba);uart_puts(" num
-  // ");uart_hex(num);uart_puts("\n");
   if (sd_status(SR_DAT_INHIBIT | SR_WRITE_AVAILABLE)) {
     sd_err = SD_TIMEOUT;
     return 0;
@@ -420,7 +412,6 @@ int sd_init() {
     uart_puts("[ERROR] Failed to reset EMMC\n");
     return SD_ERROR;
   }
-  // uart_puts("[DEBUG] EMMC reset OK\n");
 
   *EMMC_CONTROL1 |= C1_CLK_INTLEN | C1_TOUNIT_MAX;
   wait_msec(10);
@@ -454,8 +445,6 @@ int sd_init() {
   sd_execute_command(CMD_ALL_SEND_CID, 0);
 
   sd_rca = sd_execute_command(CMD_SEND_REL_ADDR, 0);
-  // uart_puts("EMMC: CMD_SEND_REL_ADDR returned "); uart_hex(sd_rca >> 32);
-  // uart_hex(sd_rca); uart_puts("\n");
   if (sd_err) {
     return sd_err;
   }

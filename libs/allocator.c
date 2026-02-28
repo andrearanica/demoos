@@ -89,32 +89,32 @@ void map_page(struct PCB* process, unsigned long virtual_address, unsigned long 
 // Returns the address of the next table which is pointed by the entry
 unsigned long map_table(unsigned long* table, unsigned long index_shift, unsigned long virtual_address, int* new_table_entry_created) {
     // First I extract the index of the given virtual address inside the given table
-    unsigned long index = virtual_address >> index_shift;
-    index = index & (PTRS_PER_TABLE - 1);
+    unsigned long table_index = virtual_address >> index_shift;
+    table_index = table_index & (PTRS_PER_TABLE - 1);
 
-    if (!table[index]) {
-        // If the table doesn't have an entry in the index, I need to create it
+    if (!table[table_index]) {
+        // If the table doesn't have an entry in the table_index, I need to create it
         *new_table_entry_created = 1;
         unsigned long next_level_table = get_free_page();
         memzero(next_level_table + VA_START, PAGE_SIZE);
         unsigned long entry = next_level_table | MM_TYPE_PAGE_TABLE;
-        table[index] = entry;
+        table[table_index] = entry;
         return next_level_table;
     } else {
         // Otherwhise the page with the given virtual address is already written in the page table
         *new_table_entry_created = 0;
     }
 
-    unsigned long next_table_address = table[index] & PAGE_MASK;
+    unsigned long next_table_address = table[table_index] & PAGE_MASK;
     return next_table_address;
 }
 
 // Writes an entry in the PTE which points to a physical address for the given virtual address
 void map_table_entry(unsigned long* pte, unsigned long virtual_address, unsigned long page_physical_address) {
-    unsigned long index = virtual_address >> PAGE_SHIFT;
-    index = index & (PTRS_PER_TABLE - 1);
+    unsigned long table_index = virtual_address >> PAGE_SHIFT;
+    table_index = table_index & (PTRS_PER_TABLE - 1);
     unsigned long entry = page_physical_address | MMU_PTE_FLAGS;
-    pte[index] = entry;
+    pte[table_index] = entry;
 }
 
 // Maps the given range of addresses in the PMD as a sector
@@ -142,8 +142,8 @@ int map_sector(struct PCB* process, unsigned long start_virtual_address, unsigne
     }
     unsigned long* pmd = (unsigned long*)((pmd_phys & PAGE_MASK) + VA_START);
 
-    for (unsigned long index = first_index; index <= last_index; index++) {
-        pmd[index] = descriptor;
+    for (unsigned long pmd_index = first_index; pmd_index <= last_index; pmd_index++) {
+        pmd[pmd_index] = descriptor;
         descriptor += SECTION_SIZE;
     }
 

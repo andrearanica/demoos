@@ -39,7 +39,6 @@ void kernel_main() {
       uart_puts("[ERROR] Cannot create kernel process.\n");
   }
 
-  // FIXME if I remove this loop the kernel restarts itself
   while (1) {}
 }
 
