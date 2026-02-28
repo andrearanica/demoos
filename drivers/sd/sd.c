@@ -492,14 +492,6 @@ int sd_init() {
   }
 
   // add software flag
-  /*uart_puts("EMMC: supports ");
-  if(sd_scr[0] & SCR_SUPP_SET_BLKCNT) {
-      uart_puts("SET_BLKCNT ");
-  }
-  if(ccs) {
-      uart_puts("CCS ");
-  }
-  uart_puts("\n");*/
   sd_scr[0] &= ~SCR_SUPP_CCS;
   sd_scr[0] |= ccs;
   return SD_OK;
@@ -583,20 +575,6 @@ int enable_card(long *ccs) {
   while (!(r & ACMD41_CMD_COMPLETE) && cnt--) {
     delay(400);
     r = sd_execute_command(CMD_SEND_OP_COND, ACMD41_ARG_HC);
-    /*uart_puts("EMMC: CMD_SEND_OP_COND returned ");
-    if (r & ACMD41_CMD_COMPLETE) {
-        uart_puts("COMPLETE ");
-    }
-    if (r & ACMD41_VOLTAGE) {
-        uart_puts("VOLTAGE ");
-    }
-    if(r & ACMD41_CMD_CCS) {
-        uart_puts("CCS ");
-    }
-
-    uart_hex(r >> 32);
-    uart_hex(r);
-    uart_puts("\n");*/
 
     if ((int)sd_err != SD_TIMEOUT && (int)sd_err != SD_OK) {
       uart_puts("ERROR: EMMC ACMD41 returned error\n");

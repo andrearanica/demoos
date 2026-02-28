@@ -7,9 +7,11 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define FAT_MAX_NAME_SIZE 64
+
 typedef struct {
     uint32_t size;
-    char name[64];
+    char name[FAT_MAX_NAME_SIZE];
     bool is_dir;
 } FatEntryInfo;
 

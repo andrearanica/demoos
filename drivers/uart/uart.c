@@ -95,10 +95,6 @@ static inline int uart_rx_fifo_not_empty(void) {
   return !(mmio_read(UART0_FR) & (1 << 4));
 }
 
-static inline int uart_tx_fifo_not_full(void) {
-  return !(mmio_read(UART0_FR) & (1 << 5));
-}
-
 // Gestore interrupt UART
 void handle_uart_irq(void) {
   unsigned int mis = mmio_read(UART0_MIS);
