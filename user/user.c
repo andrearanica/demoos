@@ -154,7 +154,12 @@ void handle_mkdir(char *buffer, char *working_directory) {
 
   char temp[64];
   memset(temp, 0, 64);
-  strcat(temp, working_directory);
+
+  if (strlen(temp) < 64) {
+    strcat(temp, working_directory);
+  } else {
+    return;
+  }
   if (dir_name[0] != '/') {
     strcat(temp, "/");
   }
@@ -390,8 +395,12 @@ void handle_write(char* buffer, char* working_directory) {
   file_content[i] = '\0';
 
   char file_path[MAX_PATH] = {0};
-  strcat(file_path, working_directory);
-  strcat(file_path, file_name);
+  if (strlen(working_directory) + strlen(file_name) < MAX_PATH) {
+    strcat(file_path, working_directory);
+    strcat(file_path, file_name);
+  } else {
+    call_syscall_write("[SHELL] Error: file path is too big\n");
+  }
 
   int fd = call_syscall_open_file(file_path, FAT_CREATE | FAT_WRITE);
   if (fd == -1) {

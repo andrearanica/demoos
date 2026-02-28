@@ -7,6 +7,8 @@
 #include "utils.h"
 #include "../common/string.h"
 
+#define MAX_PATH 128
+
 void syscall_write(char *buffer) {
   unsigned long kernel_buffer = user_to_kernel_address((unsigned long)buffer);
   uart_puts((char*)kernel_buffer);
@@ -25,8 +27,11 @@ unsigned long syscall_malloc() {
 void syscall_exit() { exit_process(); }
 
 int syscall_create_dir(char *dir_relative_path) {
-  char complete_path[128];
-  strcpy(complete_path, "/mnt/\0");
+  char complete_path[MAX_PATH];
+  strcpy(complete_path, "/mnt/");
+  if (strlen(complete_path) + strlen(dir_relative_path) >= MAX_PATH) {
+    return -1;
+  }
   strcat(complete_path, dir_relative_path);
 
   int file_descriptor = -1;
@@ -50,8 +55,12 @@ int syscall_create_dir(char *dir_relative_path) {
 }
 
 int syscall_open_dir(const char *dir_relative_path) {
-  char complete_path[128];
-  strcpy(complete_path, "/mnt/\0");
+  char complete_path[MAX_PATH];
+  strcpy(complete_path, "/mnt/");
+  if (strlen(complete_path) + strlen(dir_relative_path) >= MAX_PATH) {
+    return -1;
+  }
+
   strcat(complete_path, dir_relative_path);
   
   int file_descriptor = -1;
@@ -77,8 +86,12 @@ int syscall_open_dir(const char *dir_relative_path) {
 }
 
 int syscall_open_file(char *file_relative_path, uint8_t flags) {
-  char complete_path[128];
-  strcpy(complete_path, "/mnt/\0");
+  char complete_path[MAX_PATH];
+  strcpy(complete_path, "/mnt/");
+
+  if (strlen(complete_path) + strlen(file_relative_path) >= MAX_PATH) {
+    return -1;
+  }
   strcat(complete_path, file_relative_path);
 
   int file_descriptor = -1;
