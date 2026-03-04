@@ -474,6 +474,11 @@ void handle_signals() {
     }
     call_syscall_write("[SON] This line should never be printed\n");
   } else {
-    // FIXME send message
+    call_syscall_yield();
+    call_syscall_send_signal(pid, SIGNAL_STOP);
+    call_syscall_write("[FATHER] I stopped my son.\n");
+    call_syscall_yield();
+    call_syscall_write("[FATHER] Now I resume my son.\n");
+    call_syscall_send_signal(pid, SIGNAL_RESUME);
   }
 }

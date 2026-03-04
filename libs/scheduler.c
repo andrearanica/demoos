@@ -43,8 +43,14 @@ void _schedule() {
       }
     }
   }
-  
-  switch_to_process(processes[next_process_index]);
+
+  struct PCB* next_process = processes[next_process_index];
+  handle_process_signals(next_process);
+
+  // I check again the process state because signals can change it
+  if (next_process->state == PROCESS_RUNNING) {
+    switch_to_process(next_process);
+  }
   preempt_enable();
 }
 
@@ -53,6 +59,21 @@ void schedule() {
   // I give the current process the lower priority
   current_process->counter = 0;
   _schedule();
+}
+
+// Modifies the process PCB depending on the pending signals
+void handle_process_signals(struct PCB* process) {
+  if (!process->pending_signals) {
+    return;
+  }
+
+  if (process->pending_signals & (1 << SIGNAL_KILL)) {
+    process->state = PROCESS_ZOMBIE;
+    process->pending_signals &= ~(1 << SIGNAL_KILL);
+  } else if (process->pending_signals & (1 << SIGNAL_STOP)) {
+    process->state = PROCESS_STOPPED;
+    process->pending_signals &= ~(1 << SIGNAL_STOP);
+  }
 }
 
 void switch_to_process(struct PCB *next_process) {

@@ -100,6 +100,7 @@ created by the kernel will run the DemoOS Shell.
 
 Each process has its own PCB, which contains all the informations about the 
 process. Its informations are:
+
 - `CPU context`: values of the CPU registers
 - `state` (`RUNNING`, `WAITING`...)
 - `counter`: the priority of the process in the current time

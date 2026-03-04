@@ -1,7 +1,7 @@
 #ifndef __SYSCALLS_H
 #define __SYSCALLS_H
 
-#define __NR_SYSCALLS 16
+#define __NR_SYSCALLS 17
 
 #ifndef __ASSEMBLER__
 
@@ -23,6 +23,7 @@ int syscall_input(char* buffer, int len);
 int syscall_fork();
 int syscall_send_message(int destination_pid, char* body);
 void syscall_receive_message(char* body);
+int syscall_send_signal(int destination_pid, int signal_flag);
 
 int syscall_get_next_entry(int file_descriptor, FatEntryInfo* entry_info);
 

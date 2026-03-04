@@ -225,11 +225,16 @@ void syscall_receive_message(char* body) {
   receive_message(current_process, body);
 }
 
+int syscall_send_signal(int destination_pid, int signal_flag) {
+  return send_signal(destination_pid, signal_flag);
+}
+
 void *const sys_call_table[] = {
     syscall_write,          syscall_malloc,     syscall_clone,
     syscall_exit,           syscall_create_dir, syscall_open_dir,
     syscall_open_file,      syscall_close_file, syscall_write_file,
     syscall_read_file,      syscall_yield,      syscall_input,
     syscall_get_next_entry, syscall_fork,
-    syscall_send_message,   syscall_receive_message
+    syscall_send_message,   syscall_receive_message,
+    syscall_send_signal
 };

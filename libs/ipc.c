@@ -114,3 +114,32 @@ void print_circular_buffer(struct MessagesCircularBuffer* buffer) {
         uart_puts("\n");
     }
 }
+
+int send_signal(int destination_process_pid, int signal_flag) {
+    struct PCB* destination_process = NULL;
+    for (int i = 0; i < n_processes; i++) {
+        if (processes[i]->pid == destination_process_pid) {
+            destination_process = processes[i];
+        }
+    }
+
+    if (destination_process == NULL) {
+        return -1;
+    }
+
+    if (signal_flag >= SIGNALS_NUMBER) {
+        return -1;
+    }
+
+    destination_process->pending_signals |= (1 << signal_flag);
+
+    return 0;
+}
+
+void find_process_by_pid(int pid, struct PCB* destination_process) {
+    for (int i = 0; i < n_processes; i++) {
+        if (processes[i]->pid == pid) {
+            destination_process = processes[i];
+        }
+    }
+}

@@ -24,4 +24,6 @@ int call_syscall_fork();
 int call_syscall_send_message(int destination_pid, char* body);
 void call_syscall_receive_message(char* body);
 
+int call_syscall_send_signal(int destination_pid, int signal_flag);
+
 #endif
