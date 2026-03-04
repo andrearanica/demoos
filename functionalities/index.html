@@ -48,7 +48,7 @@
                 </li>
               </ul>
               <ul class="current">
-                <li class="toctree-l1 current"><a class="reference internal current" href="#">Functionalities</a>
+                <li class="toctree-l1 current"><a class="reference internal current" href="./">Functionalities</a>
     <ul class="current">
     <li class="toctree-l2"><a class="reference internal" href="#bootloader">Bootloader</a>
     </li>
@@ -75,6 +75,12 @@
     <li class="toctree-l3"><a class="reference internal" href="#memory-management">Memory management</a>
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#ipc">IPC</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#messages">Messages</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#signals">Signals</a>
+    </li>
+        </ul>
     </li>
         </ul>
     </li>
@@ -182,10 +188,12 @@ way, the kernel has the entire memory mapped in its tables. </p>
 <h2 id="kernel">Kernel</h2>
 <p>After the page tables for the kernel have been created, the bootloader jumps to 
 the kernel to start the core functionalities of DemoOS.  </p>
-<p>The kernel starts its execution by initializing and enabling:
-- IRQ, to intercept the interrupt requests
-- UART, to communicate using the serial port
-- Filesystem on the SD card</p>
+<p>The kernel starts its execution by initializing and enabling:</p>
+<ul>
+<li>IRQ, to intercept the interrupt requests</li>
+<li>UART, to communicate using the serial port</li>
+<li>Filesystem on the SD card</li>
+</ul>
 <p>After the core functionalities are enabled, the kernel creates the first kernel 
 process by calling the <code>copy_process</code> function; then this process is moved to 
 the user mode by calling the <code>move_to_user_mode</code> function.</p>
@@ -197,19 +205,21 @@ created by the kernel will run the DemoOS Shell. </p>
 <h2 id="processes">Processes</h2>
 <h3 id="data">Data</h3>
 <p>Each process has its own PCB, which contains all the informations about the 
-process. Its informations are:
-- <code>CPU context</code>: values of the CPU registers
-- <code>state</code> (<code>RUNNING</code>, <code>WAITING</code>...)
-- <code>counter</code>: the priority of the process in the current time
-- <code>priority</code>: it is used to calculate the counter
-- <code>preempt_disabled</code>: if <code>true</code>, the process won't be preempted
-- <code>pid</code>: the identificator
-- <code>stack</code>: the pointer
-- <code>flags</code>: the flags with which the process has been cloned from its father
-- <code>files</code>: an array with the files open by the process
-- <code>mm</code>: a struct which contains all the data about the memory allocated for the 
-process
-- <code>messages_buffer</code>: a circular buffer with the messages arrived to the process</p>
+process. Its informations are:</p>
+<ul>
+<li><code>CPU context</code>: values of the CPU registers</li>
+<li><code>state</code> (<code>RUNNING</code>, <code>WAITING</code>...)</li>
+<li><code>counter</code>: the priority of the process in the current time</li>
+<li><code>priority</code>: it is used to calculate the counter</li>
+<li><code>preempt_disabled</code>: if <code>true</code>, the process won't be preempted</li>
+<li><code>pid</code>: the identificator</li>
+<li><code>stack</code>: the pointer</li>
+<li><code>flags</code>: the flags with which the process has been cloned from its father</li>
+<li><code>files</code>: an array with the files open by the process</li>
+<li><code>mm</code>: a struct which contains all the data about the memory allocated for the 
+process</li>
+<li><code>messages_buffer</code>: a circular buffer with the messages arrived to the process</li>
+</ul>
 <h3 id="creation">Creation</h3>
 <p>As said before, the kernel creates the first process by calling the 
 <code>copy_process</code> function. This function has two different behaviours, depending 
@@ -254,13 +264,37 @@ to a process; it finds the first free page, maps it into the process page tables
 and then returns the <em>kernel</em> virtual address of the page. </li>
 </ul>
 <h3 id="ipc">IPC</h3>
-<p>Processes can communicate by sending messages. There are two type of messages:</p>
+<h4 id="messages">Messages</h4>
+<p>Processes can communicate by sending messages. Each process can accept a fixed 
+number of messages, which are contained inside a circular buffer in the process 
+PCB.<br />
+The message will be contained inside a raw char array, and the parsing of this 
+message must be handled by the destination process. </p>
+<p>There are two operations which can make this IPC possible:</p>
 <ul>
-<li>Raw messages: simple messages sent by a process to another to exchange data
-as a char buffer</li>
-<li>Signals (not working yet): messages which are intercepted and handled by the
-kernel</li>
+<li>Send message: sends a message to another process and saves it inside its
+circular buffer</li>
+<li>Receive message: reads the first message saved inside the process circular 
+buffer</li>
 </ul>
+<p>Both sending and receiving messages are blocking:</p>
+<ul>
+<li>When sending a message, if the destination process messages buffer is full, 
+the sender will be blocked and resumed the first time the destination process
+will pop a message from its buffer</li>
+<li>When receiving a message, the process will wait to have at least a message
+in its buffer before continuing its execution</li>
+</ul>
+<h4 id="signals">Signals</h4>
+<p>A process can also send signals to another process. There are 3 types of signals:</p>
+<ul>
+<li>Kill: terminates the process</li>
+<li>Stop: stops the process execution until a Resume message is sent</li>
+<li>Resume: resumes the execution of a stopped process</li>
+</ul>
+<p>Signals are non blocking and handled entirely by the kernel, in fact for the moment it's not 
+possible to define custom handlers for the signals. Furthermore, there is no control about who can
+send signals to other processes; for example, the son of a process can kill its father process. </p>
 <h2 id="system-calls">System calls</h2>
 <p>Each user process can invoke a system call to ask the kernel to perform a 
 particular operation. When a process calls a system calls, the kernel generates 
@@ -271,13 +305,15 @@ of the generated exception. </p>
 together with the system call table array. Then, each user process must contain 
 the <code>user_syscalls.h</code> and <code>user_syscalls.S</code> files: this libraries contain the 
 functions to generate the SVC exception to invoke the system calls. </p>
-<p>Let's see the flow of a system call invocation from the user process:
-- The user calls the <code>call_syscall_write</code> function from <code>user_syscalls.h</code>
-- This function generates an SVC with the code of the <code>syscall_write</code> defined in
-<code>user_syscalls.S</code>, which is <code>0</code>
-- The <code>entry.S</code> calls the function stored at the <code>0</code> position
-- This function prints on the UART the passed text
-- Then, kernel exits and the control returns to the process</p>
+<p>Let's see the flow of a system call invocation from the user process:</p>
+<ul>
+<li>The user calls the <code>call_syscall_write</code> function from <code>user_syscalls.h</code></li>
+<li>This function generates an SVC with the code of the <code>syscall_write</code> defined in
+<code>user_syscalls.S</code>, which is <code>0</code></li>
+<li>The <code>entry.S</code> calls the function stored at the <code>0</code> position</li>
+<li>This function prints on the UART the passed text</li>
+<li>Then, kernel exits and the control returns to the process</li>
+</ul>
 <h4 id="io">IO</h4>
 <table>
 <thead>
@@ -362,7 +398,7 @@ functions to generate the SVC exception to invoke the system calls. </p>
 <td>Forces the scheduler to assign the CPU to a new process</td>
 </tr>
 <tr>
-<td><code>syscall_send_message(int destination_pid, MessageType message_type, char* body)</code></td>
+<td><code>syscall_send_message(int destination_pid, char* body)</code></td>
 <td>Sends a message to another process</td>
 </tr>
 </tbody>
