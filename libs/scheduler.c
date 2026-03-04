@@ -11,6 +11,8 @@ struct PCB *processes[N_PROCESSES] = {
 };
 int n_processes = 1;
 
+void handle_process_signals(struct PCB* process);
+
 void preempt_enable() { current_process->preempt_disabled--; }
 
 void preempt_disable() { current_process->preempt_disabled++; }
@@ -23,8 +25,8 @@ void _schedule() {
     next_process_index = 0;
     for (int i = 0; i < N_PROCESSES; i++) {
       if (processes[i]) {
-        if (processes[i]->state == PROCESS_RUNNING &&
-            processes[i]->counter > max_counter) {
+        handle_process_signals(processes[i]);
+        if (processes[i]->state == PROCESS_RUNNING && processes[i]->counter > max_counter) {
           max_counter = processes[i]->counter;
           next_process_index = i;
         }
@@ -38,13 +40,18 @@ void _schedule() {
     // If I didn't find any process, I increment the counter of each one
     for (int i = 0; i < N_PROCESSES; i++) {
       if (processes[i]) {
-        processes[i]->counter =
-            (processes[i]->counter >> 1) + processes[i]->priority;
+        processes[i]->counter = (processes[i]->counter >> 1) + processes[i]->priority;
       }
     }
   }
-  
-  switch_to_process(processes[next_process_index]);
+
+  struct PCB* next_process = processes[next_process_index];
+  handle_process_signals(next_process);
+
+  // I check again the process state because signals can change it
+  if (next_process->state == PROCESS_RUNNING) {
+    switch_to_process(next_process);
+  }
   preempt_enable();
 }
 
@@ -53,6 +60,24 @@ void schedule() {
   // I give the current process the lower priority
   current_process->counter = 0;
   _schedule();
+}
+
+// Modifies the process PCB depending on the pending signals
+void handle_process_signals(struct PCB* process) {
+  if (!process->pending_signals) {
+    return;
+  }
+
+  if (process->pending_signals & (1 << SIGNAL_KILL)) {
+    process->state = PROCESS_ZOMBIE;
+    process->pending_signals &= ~(1 << SIGNAL_KILL);
+  } else if (process->pending_signals & (1 << SIGNAL_STOP)) {
+    process->state = PROCESS_STOPPED;
+    process->pending_signals &= ~(1 << SIGNAL_STOP);
+  } else if (process->pending_signals & (1 << SIGNAL_RESUME)) {
+    process->state = PROCESS_RUNNING;
+    process->pending_signals &= ~(1 << SIGNAL_RESUME);
+  }
 }
 
 void switch_to_process(struct PCB *next_process) {

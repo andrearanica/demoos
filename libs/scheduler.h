@@ -62,7 +62,6 @@ struct mm_struct {
 struct Message {
     struct PCB* source_process;
     struct PCB* destination_process;
-    MessageType type;
     char body[MAX_MESSAGES_BODY_SIZE];
 };
 
@@ -87,6 +86,8 @@ struct PCB {
   struct mm_struct mm;
 
   struct MessagesCircularBuffer messages_buffer;
+
+  int pending_signals;
 };
 
 #define PROCESS_RUNNING 1
@@ -94,6 +95,7 @@ struct PCB {
 #define PROCESS_WAITING_UART_INPUT 3
 #define PROCESS_WAITING_TO_RECEIVE_MESSAGE 4
 #define PROCESS_WAITING_TO_SEND_MESSAGE 5
+#define PROCESS_STOPPED 6
 
 #define INIT_PROCESS {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 0, 1, 1, 0, 0, 0, {}, {0, 0, {}, 0, {}}, {}}
 

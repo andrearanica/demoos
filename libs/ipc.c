@@ -5,8 +5,8 @@
 #include "../common/string.h"
 #include <stddef.h>
 
-int send_message(struct PCB* source_process, int destination_process_pid, MessageType message_type, char* body) {
-    struct Message* message = (struct Message*)allocate_kernel_page();
+int send_message(struct PCB* source_process, int destination_process_pid, char* body) {
+    struct Message message;
 
     struct PCB* destination_process = NULL;
     for (int i = 0; i < n_processes; i++) {
@@ -19,14 +19,13 @@ int send_message(struct PCB* source_process, int destination_process_pid, Messag
         return -1;
     }
     
-    message->source_process = current_process;
-    message->destination_process = destination_process;
-    message->type = message_type;
-    strcpy(message->body, body);
+    message.source_process = current_process;
+    message.destination_process = destination_process;
+    strcpy(message.body, body);
 
     int push_ok = -1;
     do {
-        push_ok = push_message(&destination_process->messages_buffer, message);
+        push_ok = push_message(&destination_process->messages_buffer, &message);
         if (push_ok == -1) {
             source_process->state = PROCESS_WAITING_TO_SEND_MESSAGE;
             schedule();
@@ -36,7 +35,7 @@ int send_message(struct PCB* source_process, int destination_process_pid, Messag
     return 0;
 }
 
-void receive_message(struct PCB* destination_process, MessageType message_type, char* body) {
+void receive_message(struct PCB* destination_process, char* body) {
     struct Message received_message;
 
     do {
@@ -45,15 +44,14 @@ void receive_message(struct PCB* destination_process, MessageType message_type, 
             break;
         } else {
             current_process->state = PROCESS_WAITING_TO_RECEIVE_MESSAGE;
+            schedule();
         }
-        schedule();
     } while (1);
     strcpy(body, received_message.body);
 
     for (int i = 0; i < n_processes; i++) {
         if (processes[i]->state == PROCESS_WAITING_TO_SEND_MESSAGE) {
             processes[i]->state = PROCESS_RUNNING;
-            schedule();
         }
     }
 }
@@ -77,7 +75,6 @@ int push_message(struct MessagesCircularBuffer* buffer, struct Message* message)
     struct PCB* destination_process = message->destination_process;
     if (destination_process->state == PROCESS_WAITING_TO_RECEIVE_MESSAGE) {
         destination_process->state = PROCESS_RUNNING;
-        schedule();
     }
 
     return 0;
@@ -113,5 +110,30 @@ void print_circular_buffer(struct MessagesCircularBuffer* buffer) {
         uart_puts("\t");
         uart_puts(buffer->buffer[i].body);
         uart_puts("\n");
+    }
+}
+
+int send_signal(int destination_process_pid, int signal_flag) {
+    struct PCB* destination_process = NULL;
+    for (int i = 0; i < n_processes; i++) {
+        if (processes[i]->pid == destination_process_pid) {
+            destination_process = processes[i];
+        }
+    }
+
+    if (destination_process == NULL) {
+        return -1;
+    }
+
+    destination_process->pending_signals |= (1 << signal_flag);
+
+    return 0;
+}
+
+void find_process_by_pid(int pid, struct PCB* destination_process) {
+    for (int i = 0; i < n_processes; i++) {
+        if (processes[i]->pid == pid) {
+            destination_process = processes[i];
+        }
     }
 }
