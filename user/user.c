@@ -31,6 +31,7 @@ void print_tree(const char *path, int depth);
 void normalize_path(char* path);
 void handle_fork_and_messages();
 void handle_signals();
+void handle_exec();
 
 void shell() {
   char working_directory[MAX_PATH_DIMENSION] = "/";
@@ -87,6 +88,8 @@ void shell() {
       handle_fork_and_messages();
     } else if (memcmp(buffer, "signals", 7) == 0) {
       handle_signals();
+    } else if (memcmp(buffer, "exec", 4) == 0) {
+      handle_exec();
     } else {
       call_syscall_write("[SHELL] Command '\0");
       call_syscall_write(buffer);
@@ -110,6 +113,7 @@ void handle_help() {
     call_syscall_write("  clear      - Clears the screen\n\0");
     call_syscall_write("  fork       - Forks the current process, and the new one will send a message to the father\n\0");
     call_syscall_write("  signals    - Tests the signals by creating and killing a process\n\0");
+    call_syscall_write("  exec       - Forks the current process and launches a new one from the file system\n\0");
 }
 
 void handle_ls(char *buffer, char *working_directory) {
@@ -481,5 +485,16 @@ void handle_signals() {
     call_syscall_write("[FATHER] Now I resume my son.\n");
     call_syscall_send_signal(pid, SIGNAL_RESUME);
     call_syscall_yield();
+  }
+}
+
+void handle_exec() {
+  int pid = call_syscall_fork();
+  if (pid == 0) {
+    call_syscall_write("[SON] I am the son.\n");
+    call_syscall_exec("test.bin");
+    call_syscall_exit();
+  } else {
+    call_syscall_write("[FATHER] I am the father\n");
   }
 }

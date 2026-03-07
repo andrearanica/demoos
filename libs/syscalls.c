@@ -102,15 +102,14 @@ int syscall_open_file(char *file_relative_path, uint8_t flags) {
     }
   }
 
-  File *file = (File *)allocate_kernel_page();
-  int error = fat_file_open(file, complete_path, flags);
-
+  File file;
+  int error = fat_file_open(&file, complete_path, flags);
   if (error) {
     return -1;
   }
 
   current_process->files[file_descriptor]->resource_type = RESOURCE_TYPE_FILE;
-  current_process->files[file_descriptor]->f = file;
+  current_process->files[file_descriptor]->f = &file;
   return file_descriptor;
 }
 
@@ -229,6 +228,19 @@ int syscall_send_signal(int destination_pid, int signal_flag) {
   return send_signal(destination_pid, signal_flag);
 }
 
+int syscall_exec(char* path) {
+  int fd = syscall_open_file(path, FAT_READ);
+
+  char buffer[1024];
+  int read_bytes;
+  syscall_read_file(fd, buffer, 256, &read_bytes);
+
+  uart_puts(buffer);
+  uart_puts("\n");
+
+  return 0;
+}
+
 void *const sys_call_table[] = {
     syscall_write,          syscall_malloc,     syscall_clone,
     syscall_exit,           syscall_create_dir, syscall_open_dir,
@@ -236,5 +248,5 @@ void *const sys_call_table[] = {
     syscall_read_file,      syscall_yield,      syscall_input,
     syscall_get_next_entry, syscall_fork,
     syscall_send_message,   syscall_receive_message,
-    syscall_send_signal
+    syscall_send_signal,    syscall_exec
 };
