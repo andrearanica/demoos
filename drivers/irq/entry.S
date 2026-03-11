@@ -203,8 +203,6 @@ el0_svc:
 	ldr		x16, [stbl, scno, lsl #3]
 	blr		x16
  	
-	mov x0, scno
-	bl uart_hex
 	b		ret_from_syscall
  	*/
 

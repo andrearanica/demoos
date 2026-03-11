@@ -12,6 +12,9 @@
 
 void syscall_write(char *buffer) {
   unsigned long kernel_buffer = user_to_kernel_address((unsigned long)buffer);
+  uart_puts("[");
+  uart_hex(buffer);
+  uart_puts("]\n");
   uart_puts((char*)kernel_buffer);
 }
 
@@ -275,7 +278,7 @@ void syscall_dispatcher(unsigned long* registers) {
 
   switch (syscall_number) {
     case SYSCALL_WRITE_NUMBER:
-      syscall_write(registers[0]);
+      syscall_write((char*)registers[0]);
       break;
     case SYSCALL_MALLOC_NUMBER:
       registers[0] = syscall_malloc();
@@ -287,48 +290,48 @@ void syscall_dispatcher(unsigned long* registers) {
       syscall_exit();
       break;
     case SYSCALL_CREATE_DIR_NUMBER:
-      registers[0] = syscall_create_dir(registers[0]);
+      registers[0] = syscall_create_dir((char*)registers[0]);
       break;
     case SYSCALL_OPEN_DIR_NUMBER:
-      registers[0] = syscall_open_dir(registers[0]);
+      registers[0] = syscall_open_dir((char*)registers[0]);
       break;
     case SYSCALL_OPEN_FILE_NUMBER:
-      registers[0] = syscall_open_file(registers[0], registers[1]);
+      registers[0] = syscall_open_file((char*)registers[0], (uint8_t)registers[1]);
       break;
     case SYSCALL_CLOSE_FILE_NUMBER:
-      registers[0] = syscall_close_file(registers[0]);
+      registers[0] = syscall_close_file((int)registers[0]);
       break;
     case SYSCALL_WRITE_FILE_NUMBER:
-      registers[0] = syscall_write_file(registers[0], registers[1], registers[2], registers[3]);
+      registers[0] = syscall_write_file((int)registers[0], (char*)registers[1], (int)registers[2], (int*)registers[3]);
       break;
     case SYSCALL_READ_FILE_NUMBER:
-      registers[0] = syscall_read_file(registers[0], registers[1], registers[2], registers[3]);
+      registers[0] = syscall_read_file((int)registers[0], (char*)registers[1], (int)registers[2], (int*)registers[3]);
       break;
     case SYSCALL_YIELD_NUMBER:
       syscall_yield();
       break;
     case SYSCALL_INPUT_NUMBER:
-      registers[0] = syscall_input(registers[0], registers[1]);
+      registers[0] = syscall_input((char*)registers[0], (int)registers[1]);
       break;
     case SYSCALL_GET_NEXT_ENTRY_NUMBER:
-      registers[0] = syscall_get_next_entry(registers[0], registers[1]);
+      registers[0] = syscall_get_next_entry((int)registers[0], (FatEntryInfo*)registers[1]);
       break;
     case SYSCALL_FORK_NUMBER:
       registers[0] = syscall_fork();
       break;
     case SYSCALL_SEND_MESSAGE_NUMBER:
-      registers[0] = syscall_send_message(registers[0], registers[1]);
+      registers[0] = syscall_send_message((int)registers[0], (char*)registers[1]);
       break;
     case SYSCALL_RECEIVE_MESSAGE_NUMBER:
-      syscall_receive_message(registers[0]);
+      syscall_receive_message((char*)registers[0]);
       break;
     case SYSCALL_SEND_SIGNAL_NUMBER:
-      registers[0] = syscall_send_signal(registers[0], registers[1]);
+      registers[0] = syscall_send_signal((int)registers[0], (int)registers[1]);
       break;
     case SYSCALL_EXEC_NUMBER:
-      registers[0] = syscall_exec(registers[0]);
-      registers[21] = 0;
-      registers[23] = 0;
+      registers[0] = syscall_exec((char*)registers[0]);
+      registers[32] = 0;              // I reset the program counter
+      registers[31] = 16 * PAGE_SIZE; // I reset the stack pointer
       break;
     default:
       uart_puts("[KERNEL] Syscall number '");
