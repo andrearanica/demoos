@@ -11,6 +11,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+void useless_process();
 void kernel_process();
 
 void kernel_main() {
@@ -40,6 +41,12 @@ void kernel_main() {
   }
 
   while (1) {}
+}
+
+void useless_process() {
+  while (1) {
+    uart_puts("[KERNEL] I am a useless process.\n");
+  }
 }
 
 void kernel_process() {

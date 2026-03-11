@@ -44,8 +44,7 @@ int copy_process(unsigned long clone_flags, unsigned long function, unsigned lon
     }
  }
 
-  int process_id = n_processes++;
-
+  int process_id = n_processes;
   new_process->flags = clone_flags;
   new_process->priority = current_process->priority;
   new_process->state = PROCESS_RUNNING;
@@ -53,11 +52,16 @@ int copy_process(unsigned long clone_flags, unsigned long function, unsigned lon
   new_process->preempt_disabled = 1;
   new_process->pid = process_id;
 
+  uart_puts("Creo nuovo processo: ");
+  uart_hex(new_process->pid);
+  uart_puts("\n");
+
   // x19 and x20 will be used in the assembly to call the function
   new_process->cpu_context.pc = (unsigned long)ret_from_fork;
   new_process->cpu_context.sp = (unsigned long)child_registers;
 
   processes[process_id] = new_process;
+  n_processes++;
 
   preempt_enable();
 

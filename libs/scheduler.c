@@ -9,7 +9,7 @@ struct PCB *current_process = &init_process;
 struct PCB *processes[N_PROCESSES] = {
     &init_process,
 };
-int n_processes = 1;
+int n_processes = 0;
 
 void handle_process_signals(struct PCB* process);
 
@@ -20,20 +20,23 @@ void preempt_disable() { current_process->preempt_disabled++; }
 void _schedule() {
   preempt_disable();
   long max_counter, next_process_index;
+  uart_puts("Inizio ricerca nuovo processo\n");
   while (1) {
     max_counter = -1;
     next_process_index = 0;
     for (int i = 0; i < N_PROCESSES; i++) {
       if (processes[i]) {
+        uart_puts("Process "); uart_hex(processes[i]->pid); uart_puts(" | State: "); uart_hex(processes[i]->state); uart_puts("\n");
         handle_process_signals(processes[i]);
         if (processes[i]->state == PROCESS_RUNNING && processes[i]->counter > max_counter) {
+          uart_puts("Ho scelto "); uart_hex(i); uart_puts(" perché ha stato "); uart_hex(processes[i]->state); uart_puts("\n");
           max_counter = processes[i]->counter;
           next_process_index = i;
         }
       }
     }
 
-    if (max_counter) {
+    if (max_counter > 0) {
       break;
     }
 
@@ -45,9 +48,11 @@ void _schedule() {
     }
   }
 
+  uart_puts("Ricerca terminata.\n");
+
   struct PCB* next_process = processes[next_process_index];
   handle_process_signals(next_process);
-
+  
   // I check again the process state because signals can change it
   if (next_process->state == PROCESS_RUNNING) {
     switch_to_process(next_process);
@@ -112,12 +117,7 @@ void handle_timer_tick() {
 void exit_process() {
   preempt_disable();
 
-  for (int i = 0; i < N_PROCESSES; i++) {
-    if (processes[i] == current_process) {
-      processes[i]->state = PROCESS_ZOMBIE;
-      break;
-    }
-  }
+  current_process->state = PROCESS_ZOMBIE;
 
   preempt_enable();
   schedule();

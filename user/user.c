@@ -31,7 +31,7 @@ void print_tree(const char *path, int depth);
 void normalize_path(char* path);
 void handle_fork_and_messages();
 void handle_signals();
-void handle_exec();
+void handle_exec(char* buffer);
 
 void shell() {
   char working_directory[MAX_PATH_DIMENSION] = "/";
@@ -60,11 +60,15 @@ void shell() {
     call_syscall_write(UART_WHITE_COLOR);
     call_syscall_write("$ \0");
 
-    char buffer[MAX_COMMAND_DIMENSION] = {0};
+    char buffer[MAX_COMMAND_DIMENSION];
     memset(buffer, 0, MAX_COMMAND_DIMENSION);
     
     call_syscall_input(buffer, MAX_COMMAND_DIMENSION);
     call_syscall_write("\n\0");
+
+    if (strlen(buffer) == 0) {
+      continue;
+    }
 
     if (memcmp(buffer, "help", 4) == 0) {
       handle_help();
@@ -89,7 +93,7 @@ void shell() {
     } else if (memcmp(buffer, "signals", 7) == 0) {
       handle_signals();
     } else if (memcmp(buffer, "exec", 4) == 0) {
-      handle_exec();
+      handle_exec(buffer);
     } else {
       call_syscall_write("[SHELL] Command '\0");
       call_syscall_write(buffer);
@@ -479,27 +483,36 @@ void handle_signals() {
     call_syscall_write("[SON] This line should never be printed\n");
   } else {
     call_syscall_yield();
-    call_syscall_send_signal(pid, SIGNAL_STOP);
-    call_syscall_write("[FATHER] I stopped my son.\n");
-    call_syscall_yield();
-    call_syscall_write("[FATHER] Now I resume my son.\n");
-    call_syscall_send_signal(pid, SIGNAL_RESUME);
-    call_syscall_yield();
+    call_syscall_send_signal(pid, SIGNAL_KILL);
+    call_syscall_write("[FATHER] I terminate my son.\n");
   }
 }
 
-void handle_exec() {
+void handle_exec(char* buffer) {
+  char command[MAX_COMMAND_DIMENSION] = {0};
+  char path[MAX_COMMAND_DIMENSION] = {0};
+
+  strsplit(buffer, ' ', command, path);
+  
+  if (strlen(path) == 0) {
+    call_syscall_write("[SHELL] Please specify the path of the new program to execute.\n");
+    return;
+  }
+
   int pid = call_syscall_fork();
   if (pid == 0) {
     call_syscall_write("[SON] I am the son.\n");
-    call_syscall_exec("test.bin");
+    int error = call_syscall_exec(path);
+    if (error) {
+      call_syscall_write("[SHELL] Error running new process.\n");
+      call_syscall_exit();
+      return;
+    }
+    
     while (1) {
       call_syscall_write("[SON] This line should never be printed.\n");
     }
   } else {
-    while (1) {
-      call_syscall_write("[FATHER] I am the father.\n");
-      call_syscall_yield();
-    }
+
   }
 }
