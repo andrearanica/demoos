@@ -7,14 +7,12 @@
 #include "utils.h"
 #include "../common/string.h"
 #include "../common/syscalls_types.h"
+#include "../common/memory.h"
 
 #define MAX_PATH 128
 
 void syscall_write(char *buffer) {
   unsigned long kernel_buffer = user_to_kernel_address((unsigned long)buffer);
-  uart_puts("[");
-  uart_hex(buffer);
-  uart_puts("]\n");
   uart_puts((char*)kernel_buffer);
 }
 
@@ -241,14 +239,17 @@ int syscall_exec(char* path) {
 
   char* buffer = (char*)allocate_kernel_page();
   int read_bytes;
-  syscall_read_file(fd, buffer, 256, &read_bytes);
+  syscall_read_file(fd, buffer, PAGE_SIZE, &read_bytes);
+
+  for (int i = 0; i < current_process->mm.n_user_pages; i++) {
+    unsigned long user_page = current_process->mm.user_pages[i].physical_address + VA_START;
+    memset((void*)user_page, 0, PAGE_SIZE);
+  }
 
   copy_code(current_process, buffer, read_bytes);
   current_process->cpu_context.pc = 0;
   current_process->cpu_context.sp = 16 * PAGE_SIZE;
   task_pt_regs(current_process)->registers[0] = 0;
-
-  // TODO clear user pages
 
   syscall_close_file(fd);
 

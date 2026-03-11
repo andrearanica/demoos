@@ -498,7 +498,7 @@ void handle_exec() {
     }
   } else {
     while (1) {
-      call_syscall_write("[FATHER] I am the father\n");
+      call_syscall_write("[FATHER] I am the father.\n");
       call_syscall_yield();
     }
   }
