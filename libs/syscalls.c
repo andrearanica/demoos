@@ -80,9 +80,10 @@ int syscall_open_dir(const char *dir_relative_path) {
     return -1;
   }
 
-  current_process->files[file_descriptor] = (FatResource*)allocate_kernel_page();
-  current_process->files[file_descriptor]->resource_type = RESOURCE_TYPE_FOLDER;
-  current_process->files[file_descriptor]->d = dir;
+  FatResource* fr = (FatResource*)allocate_kernel_page();
+  fr->resource_type = RESOURCE_TYPE_FOLDER;
+  fr->d = dir;
+  current_process->files[file_descriptor] = fr;
 
   return file_descriptor;
 }
@@ -110,8 +111,11 @@ int syscall_open_file(char *file_relative_path, uint8_t flags) {
     return -1;
   }
 
-  current_process->files[file_descriptor]->resource_type = RESOURCE_TYPE_FILE;
-  current_process->files[file_descriptor]->f = &file;
+  FatResource* fr = (FatResource*)allocate_kernel_page();
+  fr->resource_type = RESOURCE_TYPE_FILE;
+  fr->f = &file;
+  current_process->files[file_descriptor] = fr;
+
   return file_descriptor;
 }
 
@@ -251,7 +255,7 @@ int syscall_exec(char* path) {
   current_process->cpu_context.sp = 16 * PAGE_SIZE;
   task_pt_regs(current_process)->registers[0] = 0;
 
-  syscall_close_file(fd);
+  // syscall_close_file(fd);
 
   return 0;
 }
