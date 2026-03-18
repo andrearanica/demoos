@@ -246,34 +246,37 @@ int syscall_send_signal(int destination_pid, int signal_flag) {
   return send_signal(destination_pid, signal_flag);
 }
 
-int syscall_exec(char* path, unsigned long* trap_frame, int n_arguments, char* arguments[]) {
+int syscall_exec(char* path, unsigned long* trap_frame, int n_arguments, char arguments[][256]) {
   int fd = syscall_open_file(path, FAT_READ);
   if (fd == -1) {
     return -1;
   }
 
-  trap_frame[32] = 0;              // I reset the program counter
-  trap_frame[31] = 16 * PAGE_SIZE; // I reset the stack pointer
-
-  trap_frame[0] = n_arguments;
-  for (int i = 0; i < n_arguments; i++) {
-    trap_frame[i + 1] = arguments[i];
-  }
-
   char* buffer = (char*)allocate_kernel_page();
   int read_bytes;
   syscall_read_file(fd, buffer, PAGE_SIZE, &read_bytes);
+  syscall_close_file(fd);
+
+  // Now I have to save the arguments from the shell to the new user memory
+  trap_frame[0] = n_arguments;
+  unsigned long stack_pointer = 16 * PAGE_SIZE;
+  for (int i = 0; i < n_arguments; i++) {
+    stack_pointer -= 256;
+    memcpy((unsigned long*)stack_pointer, arguments[i], 256);
+    trap_frame[i + 1] = stack_pointer;
+  }
+  
+  current_process->cpu_context.pc = 0;
+  current_process->cpu_context.sp = stack_pointer;
+
+  trap_frame[31] = stack_pointer;  // I reset the stack pointer
+  trap_frame[32] = 0;              // I reset the program counter
 
   for (int i = 0; i < current_process->mm.n_user_pages; i++) {
     unsigned long user_page = current_process->mm.user_pages[i].physical_address + VA_START;
     memset((void*)user_page, 0, PAGE_SIZE);
   }
-
   copy_code(current_process, buffer, read_bytes);
-  current_process->cpu_context.pc = 0;
-  current_process->cpu_context.sp = 16 * PAGE_SIZE;
-
-  syscall_close_file(fd);
 
   return 0;
 }
@@ -350,7 +353,8 @@ void syscall_dispatcher(unsigned long* registers) {
       registers[0] = syscall_send_signal((int)registers[0], (int)registers[1]);
       break;
     case SYSCALL_EXEC_NUMBER:
-      syscall_exec((char*)registers[0], registers, (int)registers[1], (char**)registers[2]);
+      char* kernel_arguments = (unsigned long*)user_to_kernel_address(registers[2]);
+      syscall_exec((char*)registers[0], registers, (int)registers[1], kernel_arguments);
       break;
     case SYSCALL_WAIT_NUMBER:
       registers[0] = syscall_wait((int)registers[0]);  

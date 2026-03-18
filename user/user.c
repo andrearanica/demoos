@@ -18,6 +18,8 @@
 #define MAX_COMMAND_DIMENSION 64
 // Max dimension of the buffer which handles files operations
 #define MAX_FILE_DIMENSION 256
+// Max number of arguments that can be passed to exec
+#define MAX_EXEC_ARGUMENTS 4
 
 void handle_help();
 void handle_ls(char* buffer, char* working_directory);
@@ -437,9 +439,7 @@ void handle_write(char* buffer, char* working_directory) {
 }
 
 void handle_fork_and_messages() {
-  int pid = call_syscall_fork();
-
-  
+  int pid = call_syscall_fork();  
   if (pid == 0) {
     // The son will send 5 messages to the father
     char* messages[] = {
@@ -520,22 +520,37 @@ void handle_exec(char* buffer, char* working_directory) {
 }
 
 void handle_exec_from_bin(char* buffer) {
+  char file_name[MAX_PATH_DIMENSION] = {0};
+  char arguments_raw[MAX_PATH_DIMENSION] = {0};
+
+  strsplit(buffer, ' ', file_name, arguments_raw);
+
   char complete_path[MAX_PATH_DIMENSION] = {0};
   strcat(complete_path, "/bin/");
-  strcat(complete_path, buffer);
+  strcat(complete_path, file_name);
   strcat(complete_path, ".bin");
   normalize_path(complete_path);
 
+  int n_arguments = 0;
+  char arguments[MAX_EXEC_ARGUMENTS][MAX_PATH_DIMENSION];
+
+  while (strlen(arguments_raw) > 0 && n_arguments < MAX_EXEC_ARGUMENTS) {
+    char temp[MAX_PATH_DIMENSION] = {0};
+
+    char argument[MAX_PATH_DIMENSION] = {0};
+    strsplit(arguments_raw, ' ', arguments[n_arguments], temp);
+
+    n_arguments++;
+    
+    strcpy(arguments_raw, temp);
+  }
+
   int pid = call_syscall_fork();
   if (pid == 0) {
-    char* arguments[2] = {0};
-    memset(arguments, 0, 2);
-    arguments[0] = 67;
-    arguments[1] = 100;
-    int error = call_syscall_exec(complete_path, 2, arguments);
+    int error = call_syscall_exec(complete_path, n_arguments, arguments);
     if (error) {
       call_syscall_write("[SHELL] Cannot find '");
-      call_syscall_write(buffer);
+      call_syscall_write(file_name);
       call_syscall_write("' binary file.\n");
       call_syscall_exit();
     }
