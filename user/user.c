@@ -505,7 +505,7 @@ void handle_exec(char* buffer, char* working_directory) {
   int pid = call_syscall_fork();
   if (pid == 0) {
     call_syscall_write("[SON] I am the son.\n");
-    int error = call_syscall_exec(complete_path);
+    int error = call_syscall_exec(complete_path, 0, NULL);
     if (error) {
       call_syscall_write("[SON] Error running new process.\n");
       call_syscall_exit();
@@ -528,7 +528,11 @@ void handle_exec_from_bin(char* buffer) {
 
   int pid = call_syscall_fork();
   if (pid == 0) {
-    int error = call_syscall_exec(complete_path);
+    char* arguments[2] = {0};
+    memset(arguments, 0, 2);
+    arguments[0] = 67;
+    arguments[1] = 100;
+    int error = call_syscall_exec(complete_path, 2, arguments);
     if (error) {
       call_syscall_write("[SHELL] Cannot find '");
       call_syscall_write(buffer);
@@ -539,4 +543,3 @@ void handle_exec_from_bin(char* buffer) {
     call_syscall_wait(pid);
   }
 }
-

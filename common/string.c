@@ -45,7 +45,7 @@ char *strcpy(char *dest, const char *src) {
   return dest_start;
 }
 
-// Splits the given string in two substrings using a char delimiterù
+// Splits the given string in two substrings using a char delimiter
 // This is different from the stdc 'strtok'!
 void strsplit(const char *src, char delimiter, char *dest1, char *dest2) {
   char *pointer = (char*)src;
