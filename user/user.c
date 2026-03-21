@@ -500,9 +500,14 @@ void handle_exec(char* buffer, char* working_directory) {
   }
 
   char complete_path[MAX_PATH_DIMENSION] = {0};
+  if (strlen(working_directory) + strlen(path) >= MAX_PATH_DIMENSION) {
+    call_syscall_write("[SHELL] Path is too long.\n");
+    return;
+  }
   strcat(complete_path, working_directory);
   strcat(complete_path, path);
   normalize_path(complete_path);
+
   int pid = call_syscall_fork();
   if (pid == 0) {
     call_syscall_write("[SON] I am the son.\n");
@@ -534,9 +539,14 @@ void handle_exec_from_bin(char* buffer) {
   strsplit(buffer, ' ', file_name, arguments_raw);
 
   char complete_path[MAX_PATH_DIMENSION] = {0};
+  if (strlen("/bin/") + strlen(file_name) + strlen(".bin") >= MAX_PATH_DIMENSION) {
+    call_syscall_write("[SHELL] Path is too long.\n");
+    return;
+  }
   strcat(complete_path, "/bin/");
   strcat(complete_path, file_name);
   strcat(complete_path, ".bin");
+
   normalize_path(complete_path);
 
   int n_arguments = 0;
