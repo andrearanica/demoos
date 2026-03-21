@@ -9,7 +9,7 @@ struct PCB *current_process = &init_process;
 struct PCB *processes[N_PROCESSES] = {
     &init_process,
 };
-int n_processes = 1;
+int n_processes = 0;
 
 void handle_process_signals(struct PCB* process);
 
@@ -33,7 +33,7 @@ void _schedule() {
       }
     }
 
-    if (max_counter) {
+    if (max_counter > -1) {
       break;
     }
 
@@ -47,7 +47,7 @@ void _schedule() {
 
   struct PCB* next_process = processes[next_process_index];
   handle_process_signals(next_process);
-
+  
   // I check again the process state because signals can change it
   if (next_process->state == PROCESS_RUNNING) {
     switch_to_process(next_process);
@@ -112,10 +112,15 @@ void handle_timer_tick() {
 void exit_process() {
   preempt_disable();
 
+  current_process->state = PROCESS_ZOMBIE;
   for (int i = 0; i < N_PROCESSES; i++) {
-    if (processes[i] == current_process) {
-      processes[i]->state = PROCESS_ZOMBIE;
-      break;
+    if (!processes[i]) {
+      continue;
+    }
+
+    if (processes[i]->state == PROCESS_WAITING_ANOTHER_PROCESS && processes[i]->pid_to_wait == current_process->pid) {
+      processes[i]->state = PROCESS_RUNNING;
+      processes[i]->pid_to_wait = -1;
     }
   }
 

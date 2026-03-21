@@ -74,6 +74,7 @@
 	ldp	x24, x25, [sp, #16 * 12]
 	ldp	x26, x27, [sp, #16 * 13]
 	ldp	x28, x29, [sp, #16 * 14]
+
 	add	sp, sp, #S_FRAME_SIZE
 	eret
 	.endm
@@ -186,21 +187,10 @@ stbl	.req	x27
 
 // Handle SVG generated from system calls
 el0_svc:
-	// First I load the systemcalls table and systemcall number
-	adr		stbl, sys_call_table
-
-	uxtw	scno, w8
-	mov 	sc_nr, #__NR_SYSCALLS
-	// I enable interrupts
 	bl 		enable_irq
-	// I check if my systemcall is <= the number of systemcalls
-	cmp		scno, sc_nr
-	b.hs	ni_sys
 
-	// I obtain a pointer to the systemcall handler and execute it
-	ldr		x16, [stbl, scno, lsl #3]
-	blr		x16
-
+	mov x0, sp
+	bl		syscall_dispatcher
 	b		ret_from_syscall
 
 ni_sys:
@@ -208,8 +198,6 @@ ni_sys:
 
 ret_from_syscall:
 	bl			disable_irq
-	// I save the value of x0 in the stack
-	str			x0, [sp, #S_X0]
 	kernel_exit	0
 
 el0_da:

@@ -1,8 +1,9 @@
 #include "user.h"
-#include "user_syscalls.h"
+#include "../common/user_syscalls.h"
 #include "../common/string.h"
 #include "../common/memory.h"
 #include "../common/ipc_types.h"
+#include "../common/syscalls_types.h"
 
 #define UART_NORMAL_COLOR "\x1B[0m\0"
 #define UART_RED_COLOR "\x1B[31m\0"
@@ -18,6 +19,8 @@
 #define MAX_COMMAND_DIMENSION 64
 // Max dimension of the buffer which handles files operations
 #define MAX_FILE_DIMENSION 256
+// Max number of arguments that can be passed to exec
+#define MAX_EXEC_ARGUMENTS 4
 
 void handle_help();
 void handle_ls(char* buffer, char* working_directory);
@@ -31,6 +34,8 @@ void print_tree(const char *path, int depth);
 void normalize_path(char* path);
 void handle_fork_and_messages();
 void handle_signals();
+void handle_exec(char* buffer, char* working_directory);
+void handle_exec_from_bin(char* buffer);
 
 void shell() {
   char working_directory[MAX_PATH_DIMENSION] = "/";
@@ -59,11 +64,15 @@ void shell() {
     call_syscall_write(UART_WHITE_COLOR);
     call_syscall_write("$ \0");
 
-    char buffer[MAX_COMMAND_DIMENSION] = {0};
+    char buffer[MAX_COMMAND_DIMENSION];
     memset(buffer, 0, MAX_COMMAND_DIMENSION);
     
     call_syscall_input(buffer, MAX_COMMAND_DIMENSION);
     call_syscall_write("\n\0");
+
+    if (strlen(buffer) == 0) {
+      continue;
+    }
 
     if (memcmp(buffer, "help", 4) == 0) {
       handle_help();
@@ -87,10 +96,10 @@ void shell() {
       handle_fork_and_messages();
     } else if (memcmp(buffer, "signals", 7) == 0) {
       handle_signals();
+    } else if (memcmp(buffer, "exec", 4) == 0) {
+      handle_exec(buffer, working_directory);
     } else {
-      call_syscall_write("[SHELL] Command '\0");
-      call_syscall_write(buffer);
-      call_syscall_write("' not found.\n\0");
+      handle_exec_from_bin(buffer);
     }
   }
 
@@ -110,6 +119,7 @@ void handle_help() {
     call_syscall_write("  clear      - Clears the screen\n\0");
     call_syscall_write("  fork       - Forks the current process, and the new one will send a message to the father\n\0");
     call_syscall_write("  signals    - Tests the signals by creating and killing a process\n\0");
+    call_syscall_write("  exec       - Forks the current process and launches a new one from the file system\n\0");
 }
 
 void handle_ls(char *buffer, char *working_directory) {
@@ -124,7 +134,7 @@ void handle_ls(char *buffer, char *working_directory) {
   while (1) {
       memset(info.name, 0, FAT_MAX_NAME_SIZE);
       int result = call_syscall_get_next_entry(fd, &info);
-      if (result != 1) {
+      if (result) {
           break;
       }
 
@@ -430,9 +440,7 @@ void handle_write(char* buffer, char* working_directory) {
 }
 
 void handle_fork_and_messages() {
-  int pid = call_syscall_fork();
-
-  
+  int pid = call_syscall_fork();  
   if (pid == 0) {
     // The son will send 5 messages to the father
     char* messages[] = {
@@ -440,12 +448,12 @@ void handle_fork_and_messages() {
     };
     call_syscall_write("[SON] Sending message to father\n");
     for (int i = 0; i < 5; i++) {
-      call_syscall_write("[SON] Message sent to father.\n");
-      int ok = call_syscall_send_message(1, messages[i]);
+      int ok = call_syscall_send_message(0, messages[i]);
       if (ok == -1) {
         call_syscall_write("[SON] Error sending message to father.\n");
         break;
       }
+      call_syscall_write("[SON] Message sent to father.\n");
     }
     call_syscall_exit();
   } else {
@@ -475,11 +483,102 @@ void handle_signals() {
     call_syscall_write("[SON] This line should never be printed\n");
   } else {
     call_syscall_yield();
-    call_syscall_send_signal(pid, SIGNAL_STOP);
-    call_syscall_write("[FATHER] I stopped my son.\n");
-    call_syscall_yield();
-    call_syscall_write("[FATHER] Now I resume my son.\n");
-    call_syscall_send_signal(pid, SIGNAL_RESUME);
-    call_syscall_yield();
+    call_syscall_send_signal(pid, SIGNAL_KILL);
+    call_syscall_write("[FATHER] I terminate my son.\n");
+  }
+}
+
+void handle_exec(char* buffer, char* working_directory) {
+  char command[MAX_COMMAND_DIMENSION] = {0};
+  char path[MAX_COMMAND_DIMENSION] = {0};
+
+  strsplit(buffer, ' ', command, path);
+  
+  if (strlen(path) == 0) {
+    call_syscall_write("[SHELL] Please specify the path of the new program to execute.\n");
+    return;
+  }
+
+  char complete_path[MAX_PATH_DIMENSION] = {0};
+  if (strlen(working_directory) + strlen(path) >= MAX_PATH_DIMENSION) {
+    call_syscall_write("[SHELL] Path is too long.\n");
+    return;
+  }
+  strcat(complete_path, working_directory);
+  strcat(complete_path, path);
+  normalize_path(complete_path);
+
+  int pid = call_syscall_fork();
+  if (pid == 0) {
+    call_syscall_write("[SON] I am the son.\n");
+    int error = call_syscall_exec(complete_path, 0, NULL);
+    if (error) {
+      call_syscall_write("[SON] Error running new process.\n");
+      call_syscall_exit();
+    }
+    
+    while (1) {
+      call_syscall_write("[SON] This line should never be printed.\n");
+    }
+  } else {
+    int ok = call_syscall_wait(pid);
+    if (ok) {
+      call_syscall_write("[SHELL] Cannot find process '");
+      call_syscall_write_hex(pid);
+      call_syscall_write("'\n");
+    }
+  }
+}
+
+void handle_exec_from_bin(char* buffer) {
+  char file_name[MAX_PATH_DIMENSION] = {0};
+  memzero((unsigned long)file_name, MAX_PATH_DIMENSION);
+  char arguments_raw[MAX_PATH_DIMENSION] = {0};
+  memzero((unsigned long)arguments_raw, MAX_PATH_DIMENSION);
+
+  strsplit(buffer, ' ', file_name, arguments_raw);
+
+  char complete_path[MAX_PATH_DIMENSION] = {0};
+  if (strlen("/bin/") + strlen(file_name) + strlen(".bin") >= MAX_PATH_DIMENSION) {
+    call_syscall_write("[SHELL] Path is too long.\n");
+    return;
+  }
+  strcat(complete_path, "/bin/");
+  strcat(complete_path, file_name);
+  strcat(complete_path, ".bin");
+
+  normalize_path(complete_path);
+
+  int n_arguments = 0;
+  char arguments[MAX_EXEC_ARGUMENTS][MAX_PATH_DIMENSION];
+  memzero((unsigned long)arguments, MAX_EXEC_ARGUMENTS * MAX_PATH_DIMENSION);
+
+  while (strlen(arguments_raw) > 0 && n_arguments < MAX_EXEC_ARGUMENTS) {
+    char temp[] = {0};
+    memzero((unsigned long)temp, SYSCALL_EXEC_ARGUMENT_DIMENSION);
+
+    strsplit(arguments_raw, ' ', arguments[n_arguments], temp);
+
+    n_arguments++;
+    
+    strcpy(arguments_raw, temp);
+  }
+
+  int pid = call_syscall_fork();
+  if (pid == 0) {
+    int error = call_syscall_exec(complete_path, n_arguments, arguments);
+    if (error) {
+      call_syscall_write("[SHELL] Cannot find '");
+      call_syscall_write(file_name);
+      call_syscall_write("' binary file.\n");
+      call_syscall_exit();
+    }
+  } else {
+    int ok = call_syscall_wait(pid);
+    if (ok) {
+      call_syscall_write("[SHELL] Cannot find process '");
+      call_syscall_write_hex(pid);
+      call_syscall_write("'\n");
+    }
   }
 }

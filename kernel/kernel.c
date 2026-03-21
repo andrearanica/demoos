@@ -11,6 +11,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+void useless_process();
 void kernel_process();
 
 void kernel_main() {
@@ -20,8 +21,6 @@ void kernel_main() {
 
   irq_vector_init();
   uart_puts("[DONE] irq vector init\n");
-  timer_init();
-  uart_puts("[DONE] timer init\n");
   enable_interrupt_controller();
   uart_puts("[DONE] enable interrupt controller\n");
   enable_irq();
@@ -39,7 +38,16 @@ void kernel_main() {
       uart_puts("[ERROR] Cannot create kernel process.\n");
   }
 
+  timer_init();
+  uart_puts("[DONE] timer init\n");
+
   while (1) {}
+}
+
+void useless_process() {
+  while (1) {
+    uart_puts("[KERNEL] I am a useless process.\n");
+  }
 }
 
 void kernel_process() {

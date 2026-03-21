@@ -1,22 +1,6 @@
-.section ".text.user"
+#include "../common/syscalls_types.h"
 
-.set SYSCALL_WRITE_NUMBER, 0
-.set SYSCALL_MALLOC_NUMBER, 1
-.set SYSCALL_CLONE_NUMBER, 2
-.set SYSCALL_EXIT_NUMBER, 3
-.set SYSCALL_CREATE_DIR_NUMBER, 4
-.set SYSCALL_OPEN_DIR_NUMBER, 5
-.set SYSCALL_OPEN_FILE_NUMBER, 6
-.set SYSCALL_CLOSE_FILE_NUMBER, 7
-.set SYSCALL_WRITE_FILE_NUMBER, 8
-.set SYSCALL_READ_FILE_NUMBER, 9
-.set SYSCALL_YIELD_NUMBER, 10
-.set SYSCALL_INPUT_NUMBER, 11
-.set SYSCALL_GET_NEXT_ENTRY_NUMBER, 12
-.set SYSCALL_FORK_NUMBER, 13
-.set SYSCALL_SEND_MESSAGE_NUMBER, 14
-.set SYSCALL_RECEIVE_MESSAGE_NUMBER, 15
-.set SYSCALL_SEND_SIGNAL_NUMBER, 16
+.section ".text.user"
 
 .globl call_syscall_write
 call_syscall_write:
@@ -26,22 +10,10 @@ call_syscall_write:
     svc #0
     ret
 
-.globl call_syscall_clone
-call_syscall_clone:
-    // First I save the arguments for the child process
-    // because the handler called later overwrites them
-    mov x10, x0     // Function
-    mov x11, x1     // Argument
-    mov x12, x2     // Stack
-
-    // I call the syscall handler for the clone
-    mov x0, x2
-    mov w8, #SYSCALL_CLONE_NUMBER
-    svc 0x0
-    cmp x0, #0
-    // If the syscall return 0, we are inside the new thread and we need to
-    // start it
-    beq thread_start
+.globl call_syscall_write_hex
+call_syscall_write_hex:
+    mov w8, #SYSCALL_WRITE_HEX_NUMBER
+    svc #0
     ret
 
 .globl call_syscall_malloc
@@ -131,6 +103,18 @@ call_syscall_receive_message:
 .globl call_syscall_send_signal
 call_syscall_send_signal:
     mov w8, #SYSCALL_SEND_SIGNAL_NUMBER
+    svc #0
+    ret
+
+.globl call_syscall_exec
+call_syscall_exec:
+    mov w8, #SYSCALL_EXEC_NUMBER
+    svc #0
+    ret
+
+.globl call_syscall_wait
+call_syscall_wait:
+    mov w8, #SYSCALL_WAIT_NUMBER
     svc #0
     ret
 
