@@ -448,12 +448,12 @@ void handle_fork_and_messages() {
     };
     call_syscall_write("[SON] Sending message to father\n");
     for (int i = 0; i < 5; i++) {
-      call_syscall_write("[SON] Message sent to father.\n");
-      int ok = call_syscall_send_message(1, messages[i]);
+      int ok = call_syscall_send_message(0, messages[i]);
       if (ok == -1) {
         call_syscall_write("[SON] Error sending message to father.\n");
         break;
       }
+      call_syscall_write("[SON] Message sent to father.\n");
     }
     call_syscall_exit();
   } else {

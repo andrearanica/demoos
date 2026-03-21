@@ -49,7 +49,7 @@ void receive_message(struct PCB* destination_process, char* body) {
     } while (1);
     strcpy(body, received_message.body);
 
-    for (int i = 0; i < n_processes; i++) {
+    for (int i = 0; i < N_PROCESSES; i++) {
         if (processes[i]->state == PROCESS_WAITING_TO_SEND_MESSAGE) {
             processes[i]->state = PROCESS_RUNNING;
         }
@@ -103,7 +103,7 @@ int pop_message(struct MessagesCircularBuffer* buffer, struct Message* message) 
 
 void print_circular_buffer(struct MessagesCircularBuffer* buffer) {
     uart_puts("[BUFFER] Head: "); uart_hex(buffer->head);
-    uart_puts("| Tail: "); uart_hex(buffer->tail);
+    uart_puts(" | Tail: "); uart_hex(buffer->tail);
     uart_puts("\n");
     for (int i = 0; i < MAX_MESSAGES_PER_PROCESS; i++) {
         uart_hex(i);
