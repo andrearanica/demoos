@@ -527,9 +527,9 @@ void handle_exec(char* buffer, char* working_directory) {
 
 void handle_exec_from_bin(char* buffer) {
   char file_name[MAX_PATH_DIMENSION] = {0};
-  memzero(file_name, MAX_PATH_DIMENSION);
+  memzero((unsigned long)file_name, MAX_PATH_DIMENSION);
   char arguments_raw[MAX_PATH_DIMENSION] = {0};
-  memzero(arguments_raw, MAX_PATH_DIMENSION);
+  memzero((unsigned long)arguments_raw, MAX_PATH_DIMENSION);
 
   strsplit(buffer, ' ', file_name, arguments_raw);
 
@@ -541,14 +541,11 @@ void handle_exec_from_bin(char* buffer) {
 
   int n_arguments = 0;
   char arguments[MAX_EXEC_ARGUMENTS][MAX_PATH_DIMENSION];
-  memzero(arguments, MAX_EXEC_ARGUMENTS * MAX_PATH_DIMENSION);
+  memzero((unsigned long)arguments, MAX_EXEC_ARGUMENTS * MAX_PATH_DIMENSION);
 
   while (strlen(arguments_raw) > 0 && n_arguments < MAX_EXEC_ARGUMENTS) {
     char temp[] = {0};
-    memzero(temp, SYSCALL_EXEC_ARGUMENT_DIMENSION);
-
-    char argument[SYSCALL_EXEC_ARGUMENT_DIMENSION] = {0};
-    memzero(temp, SYSCALL_EXEC_ARGUMENT_DIMENSION);
+    memzero((unsigned long)temp, SYSCALL_EXEC_ARGUMENT_DIMENSION);
 
     strsplit(arguments_raw, ' ', arguments[n_arguments], temp);
 

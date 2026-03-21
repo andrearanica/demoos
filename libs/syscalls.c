@@ -276,8 +276,8 @@ int syscall_exec(char* path, unsigned long* trap_frame, int n_arguments, char ar
   unsigned long stack_pointer = 16 * PAGE_SIZE;
   for (int i = 0; i < n_arguments; i++) {
     stack_pointer -= SYSCALL_EXEC_ARGUMENT_DIMENSION;
-    unsigned long* stack_pointer_kernel_address = user_to_kernel_address(stack_pointer);
-    strcpy((unsigned long*)stack_pointer_kernel_address, arguments[i]);
+    unsigned long* stack_pointer_kernel_address = (unsigned long*)user_to_kernel_address(stack_pointer);
+    strcpy((char*)stack_pointer_kernel_address, arguments[i]);
     trap_frame[i + 1] = stack_pointer;
   }
   
