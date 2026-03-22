@@ -307,19 +307,21 @@ scheduler is invoked, each process signals are processed and the flag is reset. 
 <h2 id="system-calls">System calls</h2>
 <p>Each user process can invoke a system call to ask the kernel to perform a 
 particular operation. When a process calls a system calls, the kernel generates 
-an SVC exception; the <code>entry.S</code> file intercepts the exception, then calls the 
-handler stored in the system call table at the index corresponding to the number
-of the generated exception. </p>
+an SVC exception; the <code>entry.S</code> file intercepts the exception, then calls a 
+dispatcher function which calls the system call depending on the number of the 
+generated SVC. </p>
 <p>The system calls are defined in the kernel, inside the <code>syscalls.c</code> file, 
-together with the system call table array. Then, each user process must contain 
-the <code>user_syscalls.h</code> and <code>user_syscalls.S</code> files: this libraries contain the 
-functions to generate the SVC exception to invoke the system calls. </p>
+together with the system call dispatcher. Then, each user process must contain 
+the <code>user_syscalls.h</code> and <code>user_syscalls.S</code> files, stored inside the <code>common</code> 
+subfolder: this libraries contain the functions to generate the SVC exception to
+invoke the system calls. </p>
 <p>Let's see the flow of a system call invocation from the user process:</p>
 <ul>
 <li>The user calls the <code>call_syscall_write</code> function from <code>user_syscalls.h</code></li>
 <li>This function generates an SVC with the code of the <code>syscall_write</code> defined in
 <code>user_syscalls.S</code>, which is <code>0</code></li>
-<li>The <code>entry.S</code> calls the function stored at the <code>0</code> position</li>
+<li>The <code>entry.S</code> calls the dispatcher function which calls the <code>syscall_write</code>
+function</li>
 <li>This function prints on the UART the passed text</li>
 <li>Then, kernel exits and the control returns to the process</li>
 </ul>
