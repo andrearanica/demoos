@@ -75,16 +75,28 @@
     <li class="toctree-l3"><a class="reference internal" href="#memory-management">Memory management</a>
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#ipc">IPC</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#messages">Messages</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#signals">Signals</a>
+    </li>
+        </ul>
     </li>
         </ul>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#system-calls">System calls</a>
         <ul>
-    <li class="toctree-l3"><a class="reference internal" href="#io">IO</a>
+    <li class="toctree-l3"><a class="reference internal" href="#uart">UART</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#filesystem">Filesystem</a>
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#memory">Memory</a>
     </li>
     <li class="toctree-l3"><a class="reference internal" href="#process">Process</a>
+        <ul>
+    <li class="toctree-l4"><a class="reference internal" href="#ipc_1">IPC</a>
+    </li>
+        </ul>
     </li>
         </ul>
     </li>
@@ -182,10 +194,12 @@ way, the kernel has the entire memory mapped in its tables. </p>
 <h2 id="kernel">Kernel</h2>
 <p>After the page tables for the kernel have been created, the bootloader jumps to 
 the kernel to start the core functionalities of DemoOS.  </p>
-<p>The kernel starts its execution by initializing and enabling:
-- IRQ, to intercept the interrupt requests
-- UART, to communicate using the serial port
-- Filesystem on the SD card</p>
+<p>The kernel starts its execution by initializing and enabling:</p>
+<ul>
+<li>IRQ, to intercept the interrupt requests</li>
+<li>UART, to communicate using the serial port</li>
+<li>Filesystem on the SD card</li>
+</ul>
 <p>After the core functionalities are enabled, the kernel creates the first kernel 
 process by calling the <code>copy_process</code> function; then this process is moved to 
 the user mode by calling the <code>move_to_user_mode</code> function.</p>
@@ -197,19 +211,21 @@ created by the kernel will run the DemoOS Shell. </p>
 <h2 id="processes">Processes</h2>
 <h3 id="data">Data</h3>
 <p>Each process has its own PCB, which contains all the informations about the 
-process. Its informations are:
-- <code>CPU context</code>: values of the CPU registers
-- <code>state</code> (<code>RUNNING</code>, <code>WAITING</code>...)
-- <code>counter</code>: the priority of the process in the current time
-- <code>priority</code>: it is used to calculate the counter
-- <code>preempt_disabled</code>: if <code>true</code>, the process won't be preempted
-- <code>pid</code>: the identificator
-- <code>stack</code>: the pointer
-- <code>flags</code>: the flags with which the process has been cloned from its father
-- <code>files</code>: an array with the files open by the process
-- <code>mm</code>: a struct which contains all the data about the memory allocated for the 
-process
-- <code>messages_buffer</code>: a circular buffer with the messages arrived to the process</p>
+process. Its informations are:</p>
+<ul>
+<li><code>CPU context</code>: values of the CPU registers</li>
+<li><code>state</code> (<code>RUNNING</code>, <code>WAITING</code>...)</li>
+<li><code>counter</code>: the priority of the process in the current time</li>
+<li><code>priority</code>: it is used to calculate the counter</li>
+<li><code>preempt_disabled</code>: if <code>true</code>, the process won't be preempted</li>
+<li><code>pid</code>: the identificator</li>
+<li><code>stack</code>: the pointer</li>
+<li><code>flags</code>: the flags with which the process has been cloned from its father</li>
+<li><code>files</code>: an array with the files open by the process</li>
+<li><code>mm</code>: a struct which contains all the data about the memory allocated for the 
+process</li>
+<li><code>messages_buffer</code>: a circular buffer with the messages arrived to the process</li>
+</ul>
 <h3 id="creation">Creation</h3>
 <p>As said before, the kernel creates the first process by calling the 
 <code>copy_process</code> function. This function has two different behaviours, depending 
@@ -254,13 +270,40 @@ to a process; it finds the first free page, maps it into the process page tables
 and then returns the <em>kernel</em> virtual address of the page. </li>
 </ul>
 <h3 id="ipc">IPC</h3>
-<p>Processes can communicate by sending messages. There are two type of messages:</p>
+<h4 id="messages">Messages</h4>
+<p>Processes can communicate by sending messages. Each process can accept a fixed 
+number of messages, which are contained inside a circular buffer in the process 
+PCB.<br />
+The message will be contained inside a raw char array, and the parsing of this 
+message must be handled by the destination process. </p>
+<p>There are two operations which can make this IPC possible:</p>
 <ul>
-<li>Raw messages: simple messages sent by a process to another to exchange data
-as a char buffer</li>
-<li>Signals (not working yet): messages which are intercepted and handled by the
-kernel</li>
+<li>Send message: sends a message to another process and saves it inside its
+circular buffer</li>
+<li>Receive message: reads the first message saved inside the process circular 
+buffer</li>
 </ul>
+<p>Both sending and receiving messages are blocking:</p>
+<ul>
+<li>When sending a message, if the destination process messages buffer is full, 
+the sender will be blocked and resumed the first time the destination process
+will pop a message from its buffer</li>
+<li>When receiving a message, the process will wait to have at least a message
+in its buffer before continuing its execution</li>
+</ul>
+<h4 id="signals">Signals</h4>
+<p>A process can also send signals to another process. There are 3 types of signals:</p>
+<ul>
+<li>Kill: terminates the process</li>
+<li>Stop: stops the process execution until a Resume message is sent</li>
+<li>Resume: resumes the execution of a stopped process</li>
+</ul>
+<p>Signals are non blocking and handled entirely by the kernel, in fact for the 
+moment it's not possible to define custom handlers for the signals. Furthermore,
+there is no control about who can send signals to other processes; for example, 
+the son of a process can kill its father process. </p>
+<p>Signals are handled by assigning a flag in the process PCB; everytime the 
+scheduler is invoked, each process signals are processed and the flag is reset. </p>
 <h2 id="system-calls">System calls</h2>
 <p>Each user process can invoke a system call to ask the kernel to perform a 
 particular operation. When a process calls a system calls, the kernel generates 
@@ -271,99 +314,167 @@ of the generated exception. </p>
 together with the system call table array. Then, each user process must contain 
 the <code>user_syscalls.h</code> and <code>user_syscalls.S</code> files: this libraries contain the 
 functions to generate the SVC exception to invoke the system calls. </p>
-<p>Let's see the flow of a system call invocation from the user process:
-- The user calls the <code>call_syscall_write</code> function from <code>user_syscalls.h</code>
-- This function generates an SVC with the code of the <code>syscall_write</code> defined in
-<code>user_syscalls.S</code>, which is <code>0</code>
-- The <code>entry.S</code> calls the function stored at the <code>0</code> position
-- This function prints on the UART the passed text
-- Then, kernel exits and the control returns to the process</p>
-<h4 id="io">IO</h4>
+<p>Let's see the flow of a system call invocation from the user process:</p>
+<ul>
+<li>The user calls the <code>call_syscall_write</code> function from <code>user_syscalls.h</code></li>
+<li>This function generates an SVC with the code of the <code>syscall_write</code> defined in
+<code>user_syscalls.S</code>, which is <code>0</code></li>
+<li>The <code>entry.S</code> calls the function stored at the <code>0</code> position</li>
+<li>This function prints on the UART the passed text</li>
+<li>Then, kernel exits and the control returns to the process</li>
+</ul>
+<h3 id="uart">UART</h3>
 <table>
 <thead>
 <tr>
 <th>Function name</th>
 <th>Description</th>
+<th>Return</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>syscall_write(char* buffer)</code></td>
+<td><code>void call_syscall_write(char* buffer)</code></td>
 <td>Writes the given buffer into the UART</td>
+<td>Nothing</td>
 </tr>
 <tr>
-<td><code>syscall_input(char* buffer, int len)</code></td>
-<td>Reads a buffer from the UART and stores it in the passed buffer</td>
+<td><code>void call_syscall_write_hex(int number)</code></td>
+<td>Writes the given number into the UART in the hexadecimal representation</td>
+<td>Nothing</td>
 </tr>
 <tr>
-<td><code>syscall_create_dir(char* dir_path)</code></td>
-<td>Creates a new directory in the filesystem and returns its file descriptor</td>
+<td><code>void call_syscall_input(char* buffer, int len)</code></td>
+<td>Reads a buffer from the UART and stores it in the passed buffer; the buffer will be filled until the given dimension is reached, or until the first termination character (<code>\n</code>, <code>\r</code>, <code>\0</code>)</td>
+<td>Nothing</td>
+</tr>
+</tbody>
+</table>
+<h3 id="filesystem">Filesystem</h3>
+<table>
+<thead>
+<tr>
+<th>Function name</th>
+<th>Description</th>
+<th>Return</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>int call_syscall_create_dir(char* dir_path)</code></td>
+<td>Creates a new directory in the filesystem</td>
+<td>File descriptor of the folder; <code>-1</code> if an error occoured</td>
 </tr>
 <tr>
-<td><code>syscall_open_dir(char dir_path*)</code></td>
-<td>Opens the given directory and returns its file descriptor</td>
+<td><code>int call_syscall_open_dir(char dir_path*)</code></td>
+<td>Opens the given directory</td>
+<td>File descriptor of the folder; <code>-1</code> if an error occoured</td>
 </tr>
 <tr>
-<td><code>syscall_open_file(char* file_path, uint8_t flags)</code></td>
-<td>Opens the given file and returns its file descriptor</td>
+<td><code>int call_syscall_open_file(char* file_path, uint8_t flags)</code></td>
+<td>Opens the given file</td>
+<td>File descriptor of the file; <code>-1</code> if an error occoured</td>
 </tr>
 <tr>
-<td><code>syscall_close_file(int file_descriptor)</code></td>
+<td><code>int call_syscall_close_file(int file_descriptor)</code></td>
 <td>Closes the file with the given file descriptor</td>
+<td><code>0</code> if the file is closed correctly; <code>-1</code> if an error occoured</td>
 </tr>
 <tr>
-<td><code>syscall_write_file(int file_descriptor, char* buffer, int len, int* bytes)</code></td>
+<td><code>int call_syscall_write_file(int file_descriptor, char* buffer, int len, int* bytes)</code></td>
 <td>Writes the given content in the file with the given file descriptor; bytes will be the number of written bytes</td>
+<td><code>0</code> if the operation is successful, <code>-1</code> otherwhise</td>
 </tr>
 <tr>
-<td><code>syscall_read_file(int file_descriptor, char* buffer, int len, int* bytes)</code></td>
+<td><code>int call_syscall_read_file(int file_descriptor, char* buffer, int len, int* bytes)</code></td>
 <td>Reads the content of the open file with the given descriptor and puts it into the given buffer; bytes will be the number of read bytes</td>
+<td><code>0</code> if the operation is successful, <code>-1</code> otherwhise</td>
 </tr>
 <tr>
-<td><code>syscall_get_next_entry(int file_descriptor, FatEntryInfo* entry_info)</code></td>
+<td><code>int call_syscall_get_next_entry(int file_descriptor, FatEntryInfo* entry_info)</code></td>
 <td>Saves into <code>entry_info</code> the info about the entry, and then increases the pointer in the directory</td>
+<td><code>0</code> if the operation is successful, <code>-1</code> otherwhise</td>
 </tr>
 </tbody>
 </table>
-<h4 id="memory">Memory</h4>
+<h3 id="memory">Memory</h3>
 <table>
 <thead>
 <tr>
 <th>Function name</th>
 <th>Description</th>
+<th>Return</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>syscall_malloc()</code></td>
-<td>Gets the first free page and allocates it for the kernel; returns the kernel address of the page</td>
+<td><code>unsigned long call_syscall_malloc()</code></td>
+<td>Gets the first free page and allocates it for the kernel</td>
+<td>The kernel address of the allocated page; <code>-1</code> if an error occoured</td>
 </tr>
 </tbody>
 </table>
-<h4 id="process">Process</h4>
+<h3 id="process">Process</h3>
 <table>
 <thead>
 <tr>
 <th>Function name</th>
 <th>Description</th>
+<th>Return</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>syscall_exit()</code></td>
+<td><code>void call_syscall_exit()</code></td>
 <td>Terminates the current process</td>
+<td>Nothing</td>
 </tr>
 <tr>
-<td><code>syscall_fork()</code></td>
-<td>Creates a copy of the current process and returns its PID</td>
+<td><code>int call_syscall_fork()</code></td>
+<td>Creates a copy (both code and data) of the current process</td>
+<td>The PID of the new process; <code>-1</code> if an error occoured</td>
 </tr>
 <tr>
-<td><code>syscall_yield()</code></td>
+<td><code>void call_syscall_yield()</code></td>
 <td>Forces the scheduler to assign the CPU to a new process</td>
+<td>Nothing</td>
 </tr>
 <tr>
-<td><code>syscall_send_message(int destination_pid, MessageType message_type, char* body)</code></td>
+<td><code>int call_syscall_exec(char* path, int n_arguments, char arguments[][SYSCALL_EXEC_ARGUMENT_DIMENSION])</code></td>
+<td>Substitutes the current process code segment with the one in the given file path</td>
+<td><code>0</code> if the operation is successful; <code>-1</code> if an error occoured</td>
+</tr>
+<tr>
+<td><code>int call_syscall_wait(int pid)</code></td>
+<td>The process is put in waiting untill the desired process invokes the <code>call_syscall_exit</code> systemcall</td>
+<td><code>0</code> if the operation is successful; <code>-1</code> if the <code>pid</code> doesn't exist</td>
+</tr>
+</tbody>
+</table>
+<h4 id="ipc_1">IPC</h4>
+<table>
+<thead>
+<tr>
+<th>Function name</th>
+<th>Description</th>
+<th>Return</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>int call_syscall_send_message(int destination_pid, char* body)</code></td>
 <td>Sends a message to another process</td>
+<td><code>0</code> if the message has been sent; <code>-1</code> if an error occoured</td>
+</tr>
+<tr>
+<td><code>void call_syscall_send_message(char* body)</code></td>
+<td>Reads the first message arrived to the process, and puts it into <code>body</code></td>
+<td>Nothing</td>
+</tr>
+<tr>
+<td><code>int call_syscall_send_signal(int destination_pid, int signal_flag)</code></td>
+<td>Sends a signal to the desired process</td>
+<td><code>0</code> if the signal has been sent; <code>-1</code> if an error occoured</td>
 </tr>
 </tbody>
 </table>
