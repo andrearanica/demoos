@@ -209,38 +209,40 @@ scheduler is invoked, each process signals are processed and the flag is reset.
 
 Each user process can invoke a system call to ask the kernel to perform a 
 particular operation. When a process calls a system calls, the kernel generates 
-an SVC exception; the `entry.S` file intercepts the exception, then calls the 
-handler stored in the system call table at the index corresponding to the number
-of the generated exception. 
+an SVC exception; the `entry.S` file intercepts the exception, then calls a 
+dispatcher function which calls the system call depending on the number of the 
+generated SVC. 
 
 The system calls are defined in the kernel, inside the `syscalls.c` file, 
-together with the system call table array. Then, each user process must contain 
-the `user_syscalls.h` and `user_syscalls.S` files: this libraries contain the 
-functions to generate the SVC exception to invoke the system calls. 
+together with the system call dispatcher. Then, each user process must contain 
+the `user_syscalls.h` and `user_syscalls.S` files, stored inside the `common` 
+subfolder: this libraries contain the functions to generate the SVC exception to
+invoke the system calls. 
 
 Let's see the flow of a system call invocation from the user process:
 
 - The user calls the `call_syscall_write` function from `user_syscalls.h`
 - This function generates an SVC with the code of the `syscall_write` defined in
 `user_syscalls.S`, which is `0`
-- The `entry.S` calls the function stored at the `0` position
+- The `entry.S` calls the dispatcher function which calls the `syscall_write`
+function
 - This function prints on the UART the passed text
 - Then, kernel exits and the control returns to the process
 
 ### UART
 
-| Function name                                                                | Description | Return |
-| -------------                                                                | ----------- | - |
+| Function name                                                                     | Description | Return |
+| -------------                                                                     | ----------- | - |
 | `void call_syscall_write(char* buffer)`                                           | Writes the given buffer into the UART | Nothing |
 | `void call_syscall_write_hex(int number)`                                         | Writes the given number into the UART in the hexadecimal representation | Nothing |
 | `void call_syscall_input(char* buffer, int len)`                                  | Reads a buffer from the UART and stores it in the passed buffer; the buffer will be filled until the given dimension is reached, or until the first termination character (`\n`, `\r`, `\0`) | Nothing |
 
 ### Filesystem
 
-| Function name                                                                    | Description | Return |
-| -------------                                                                    | ----------- | - |
-| `int call_syscall_create_dir(char* dir_path)`                                    | Creates a new directory in the filesystem | File descriptor of the folder; `-1` if an error occoured |
-| `int call_syscall_open_dir(char dir_path*)`                                      | Opens the given directory | File descriptor of the folder; `-1` if an error occoured |
+| Function name                                                                         | Description | Return |
+| -------------                                                                         | ----------- | - |
+| `int call_syscall_create_dir(char* dir_path)`                                         | Creates a new directory in the filesystem | File descriptor of the folder; `-1` if an error occoured |
+| `int call_syscall_open_dir(char dir_path*)`                                           | Opens the given directory | File descriptor of the folder; `-1` if an error occoured |
 | `int call_syscall_open_file(char* file_path, uint8_t flags)`                          | Opens the given file | File descriptor of the file; `-1` if an error occoured |
 | `int call_syscall_close_file(int file_descriptor)`                                    | Closes the file with the given file descriptor | `0` if the file is closed correctly; `-1` if an error occoured |
 | `int call_syscall_write_file(int file_descriptor, char* buffer, int len, int* bytes)` | Writes the given content in the file with the given file descriptor; bytes will be the number of written bytes | `0` if the operation is successful, `-1` otherwhise |
@@ -258,10 +260,10 @@ Let's see the flow of a system call invocation from the user process:
 | Function name                                                                                           | Description | Return |
 | -------------                                                                                           | ----------- | - |
 | `void call_syscall_exit()`                                                                              | Terminates the current process | Nothing |
-| `int call_syscall_fork()`                                                                                   | Creates a copy (both code and data) of the current process | The PID of the new process; `-1` if an error occoured  |
+| `int call_syscall_fork()`                                                                               | Creates a copy (both code and data) of the current process | The PID of the new process; `-1` if an error occoured  |
 | `void call_syscall_yield()`                                                                             | Forces the scheduler to assign the CPU to a new process | Nothing |
 | `int call_syscall_exec(char* path, int n_arguments, char arguments[][SYSCALL_EXEC_ARGUMENT_DIMENSION])` | Substitutes the current process code segment with the one in the given file path | `0` if the operation is successful; `-1` if an error occoured |
-| `int call_syscall_wait(int pid)`                                                                       | The process is put in waiting untill the desired process invokes the `call_syscall_exit` systemcall | `0` if the operation is successful; `-1` if the `pid` doesn't exist |
+| `int call_syscall_wait(int pid)`                                                                        | The process is put in waiting untill the desired process invokes the `call_syscall_exit` systemcall | `0` if the operation is successful; `-1` if the `pid` doesn't exist |
 
 #### IPC
 
