@@ -126,8 +126,9 @@ void handle_ls(char *buffer, char *working_directory) {
   int fd = call_syscall_open_dir(working_directory);
   if (fd == -1) {
     call_syscall_write("[SHELL] Error opening folder '\0");
-    call_syscall_write(buffer);
+    call_syscall_write(working_directory);
     call_syscall_write("'.\n\0");
+    return;
   }
 
   FatEntryInfo info;

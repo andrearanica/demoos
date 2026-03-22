@@ -24,7 +24,11 @@ int copy_process(unsigned long clone_flags, unsigned long function, unsigned lon
   struct pt_regs *child_registers = task_pt_regs(new_process);
   memzero((unsigned long)child_registers, sizeof(struct pt_regs));
   memzero((unsigned long)&new_process->cpu_context, sizeof(struct cpu_context));
-  memzero((unsigned long)&new_process->files, sizeof(new_process->files));
+
+  // Files are not shared with the son
+  for (int i = 0; i < MAX_FILES_PER_PROCESS; i++) {
+    new_process->files[i] = NULL;
+  }
 
   if (clone_flags & PF_KTHREAD) {
     // If we are running a kernel thread, we only need to specify the function

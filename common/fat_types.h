@@ -8,6 +8,7 @@
 #include <stdbool.h>
 
 #define FAT_MAX_NAME_SIZE 64
+#define FAT_MAX_PATH_SIZE 128
 
 typedef struct {
     uint32_t size;

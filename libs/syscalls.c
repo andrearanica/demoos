@@ -8,6 +8,7 @@
 #include "../common/string.h"
 #include "../common/syscalls_types.h"
 #include "../common/memory.h"
+#include "filesystem.h"
 
 #define MAX_PATH 128
 
@@ -20,7 +21,9 @@ void syscall_write_hex(int number) {
   uart_hex(number);
 }
 
-int syscall_clone() { return copy_process(0, 0, 0); }
+int syscall_clone() {
+  return copy_process(0, 0, 0);
+}
 
 unsigned long syscall_malloc() {
   unsigned long address = allocate_kernel_page();
@@ -34,93 +37,71 @@ void syscall_exit() {
   exit_process();
 }
 
-int syscall_create_dir(char *dir_relative_path) {
-  char complete_path[MAX_PATH];
-  strcpy(complete_path, "/mnt/");
-  if (strlen(complete_path) + strlen(dir_relative_path) >= MAX_PATH) {
-    return -1;
-  }
-  strcat(complete_path, dir_relative_path);
-
-  int file_descriptor = -1;
+int get_first_free_file_descriptor(struct PCB* process) {
   for (int i = 0; i < MAX_FILES_PER_PROCESS; i++) {
-    if (current_process->files[i] == NULL) {
-      file_descriptor = i;
-      break;
+    if (process->files[i] == NULL) {
+      return i;
     }
   }
+  return -1;
+}
 
-  Dir *dir = (Dir *)allocate_kernel_page();
-  int error = fat_dir_create(dir, complete_path);
-  if (error) {
+int syscall_create_dir(char *dir_path) {
+  int file_descriptor = get_first_free_file_descriptor(current_process);
+  if (file_descriptor == -1) {
     return -1;
   }
 
+  Dir* created_dir = (Dir*)allocate_kernel_page();
+  int error = create_dir(dir_path, created_dir);
+  if (error) {
+    free_page((unsigned long)created_dir);
+    return error;
+  }
+
+  current_process->files[file_descriptor] = (FatResource*)allocate_kernel_page();
+  current_process->files[file_descriptor]->resource_type = RESOURCE_TYPE_FOLDER;
+  current_process->files[file_descriptor]->d = created_dir;
+
+  return file_descriptor;
+}
+
+int syscall_open_dir(const char *dir_path) {
+  int file_descriptor = get_first_free_file_descriptor(current_process);
+  if (file_descriptor == -1) {
+    return -1;
+  }
+
+  Dir* dir = (Dir*)allocate_kernel_page();
+  int error = open_dir(dir_path, dir);
+  if (error) {
+    free_page((unsigned long)dir);
+    return -1;
+  }
+
+  current_process->files[file_descriptor] = (FatResource*)allocate_kernel_page();
   current_process->files[file_descriptor]->resource_type = RESOURCE_TYPE_FOLDER;
   current_process->files[file_descriptor]->d = dir;
 
   return file_descriptor;
 }
 
-int syscall_open_dir(const char *dir_relative_path) {
-  char complete_path[MAX_PATH];
-  strcpy(complete_path, "/mnt/");
-  if (strlen(complete_path) + strlen(dir_relative_path) >= MAX_PATH) {
+int syscall_open_file(char* file_path, uint8_t flags) {
+  int file_descriptor = get_first_free_file_descriptor(current_process);
+  if (file_descriptor == -1) {
     return -1;
   }
-
-  strcat(complete_path, dir_relative_path);
   
-  int file_descriptor = -1;
-  for (int i = 0; i < MAX_FILES_PER_PROCESS; i++) {
-    if (current_process->files[i] == NULL) {
-      file_descriptor = i;
-      break;
-    }
-  }
-  
-  Dir *dir = (Dir *)allocate_kernel_page();
-  int error = fat_dir_open(dir, complete_path);
-  
-  if (error) {
-    return -1;
-  }
-
-  FatResource* fr = (FatResource*)allocate_kernel_page();
-  fr->resource_type = RESOURCE_TYPE_FOLDER;
-  fr->d = dir;
-  current_process->files[file_descriptor] = fr;
-
-  return file_descriptor;
-}
-
-int syscall_open_file(char *file_relative_path, uint8_t flags) {
-  char complete_path[MAX_PATH];
-  strcpy(complete_path, "/mnt/");
-
-  if (strlen(complete_path) + strlen(file_relative_path) >= MAX_PATH) {
-    return -1;
-  }
-  strcat(complete_path, file_relative_path);
-
-  int file_descriptor = -1;
-  for (int i = 0; i < MAX_FILES_PER_PROCESS; i++) {
-    if (current_process->files[i] == NULL) {
-      file_descriptor = i;
-      break;
-    }
-  }
-
   File* file = (File*)allocate_kernel_page();
-  int error = fat_file_open(file, complete_path, flags);
+  int error = open_file(file_path, flags, file);
   if (error) {
+    free_page((unsigned long)file);
     return -1;
   }
 
-  FatResource* fr = (FatResource*)allocate_kernel_page();
-  fr->resource_type = RESOURCE_TYPE_FILE;
-  fr->f = file;
-  current_process->files[file_descriptor] = fr;
+  current_process->files[file_descriptor] = (FatResource*)allocate_kernel_page();
+  current_process->files[file_descriptor]->resource_type = RESOURCE_TYPE_FILE;
+  current_process->files[file_descriptor]->f = file;
 
   return file_descriptor;
 }
@@ -130,31 +111,61 @@ int syscall_close_file(int file_descriptor) {
     return -1;
   }
 
-  FatResource *fat_resource = current_process->files[file_descriptor];
-  int error = fat_file_close(fat_resource->f);
+  File* file = current_process->files[file_descriptor]->f;
+  int error = fat_file_close(file);
   if (error) {
     return error;
   }
 
-  free_page((unsigned long)fat_resource);
-  current_process->files[file_descriptor] = NULL;
+  free_page((unsigned long)file);
+
+  current_process->files[file_descriptor] = (FatResource*)allocate_kernel_page();
+  current_process->files[file_descriptor]->f = NULL;
+  current_process->files[file_descriptor]->resource_type = 0;
 
   return 0;
 }
 
 int syscall_write_file(int file_descriptor, char *buffer, int len, int *bytes) {
-  FatResource *fat_resource = current_process->files[file_descriptor];
-  File *file = fat_resource->f;
+  FatResource* resource = current_process->files[file_descriptor];
+  if (resource == NULL) {
+    return -1;
+  }
+  File* file = resource->f;
   int error = fat_file_write(file, buffer, len, bytes);
   return error;
 }
 
 int syscall_read_file(int file_descriptor, char *buffer, int len, int *bytes) {
-  FatResource *fat_resource = current_process->files[file_descriptor];
-  File *file = fat_resource->f;
+  File *file = current_process->files[file_descriptor]->f;
   fat_file_seek(file, 0, FAT_SEEK_START);
   int error = fat_file_read(file, buffer, len, bytes);
   return error;
+}
+
+int syscall_get_next_entry(int file_descriptor, FatEntryInfo *entry_info) {
+  FatResource *fat_resource = current_process->files[file_descriptor];
+  Dir *dir = fat_resource->d;
+  
+  DirInfo dir_info;
+  int error = fat_dir_read(dir, &dir_info);
+
+  if (error) {
+    return -1;
+  }
+
+  int size = dir_info.name_len < 255 ? dir_info.name_len : 255;
+  for (int i = 0; i < size; i++) {
+    entry_info->name[i] = dir_info.name[i];
+  }
+  entry_info->is_dir = (dir_info.attr & FAT_ATTR_DIR) ? 1 : 0;
+
+  error = fat_dir_next(dir);
+  if (error) {
+    return -1;
+  }
+
+  return 0;
 }
 
 void syscall_yield() {
@@ -206,31 +217,6 @@ int syscall_input(char *buffer, int len) {
       }
     }
   }
-}
-
-int syscall_get_next_entry(int file_descriptor, FatEntryInfo *entry_info) {
-  FatResource *fat_resource = current_process->files[file_descriptor];
-  Dir *dir = fat_resource->d;
-  
-  DirInfo dir_info;
-  int error = fat_dir_read(dir, &dir_info);
-
-  if (error) {
-    return -1;
-  }
-
-  int size = dir_info.name_len < 255 ? dir_info.name_len : 255;
-  for (int i = 0; i < size; i++) {
-    entry_info->name[i] = dir_info.name[i];
-  }
-  entry_info->is_dir = (dir_info.attr & FAT_ATTR_DIR) ? 1 : 0;
-
-  error = fat_dir_next(dir);
-  if (error) {
-    return -1;
-  }
-
-  return 0;
 }
 
 int syscall_fork() {

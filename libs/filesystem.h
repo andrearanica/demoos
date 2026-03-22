@@ -4,10 +4,13 @@
 #define SD_FILESYSTEM_INIT_OK      0
 #define SD_FILESYSTEM_INIT_ERROR   1
 
-#include "../../libs/fat32/fat.h"
+#include "./fat32/fat.h"
 
 extern Fat g_fat;
 
 int sd_filesystem_init();
+int create_dir(char* dir_path, Dir* created_dir);
+int open_dir(char* dir_path, Dir* dir);
+int open_file(char* file_path, uint8_t flags, File* file);
 
 #endif

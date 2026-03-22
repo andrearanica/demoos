@@ -81,7 +81,7 @@ struct PCB {
 
   unsigned long flags;
 
-  FatResource *files[16];
+  FatResource *files[MAX_FILES_PER_PROCESS];
 
   struct mm_struct mm;
 
