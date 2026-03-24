@@ -149,6 +149,10 @@ int syscall_get_next_entry(int file_descriptor, FatEntryInfo *entry_info) {
   FatResource *fat_resource = current_process->files[file_descriptor];
   Dir *dir = fat_resource->d;
   
+  if (fat_resource->d == NULL) {
+    return -1;
+  }
+
   DirInfo dir_info;
   int error = fat_dir_read(dir, &dir_info);
 

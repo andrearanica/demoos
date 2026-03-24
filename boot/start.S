@@ -8,16 +8,13 @@
 #include "../libs/mm.h"
 
 _start:
-    // Controlla il livello di eccezione (EL)
-    // Il controllo viene effettuato prima dell'inizializzazione core,
-	// cosi tutti i core vengono portati allo stesso ivello
+    // Checks the exception level of the CPU to make it EL1
     mrs x0, CurrentEL
     lsr x0, x0, #2
     cmp x0, #2
     b.ne already_el1
 
-	// Se siamo qui vuol dire che siamo in EL2,
-    // passiamo da EL2 --> EL1
+    // If it's not already EL1, I change it
 	mov x0, #HCR_VALUE
 	msr HCR_EL2, x0
 	mov x0, #SPSR_VALUE
@@ -45,14 +42,6 @@ init_primary_code:
     ldr x5, =__bss_start
     ldr w6, =__bss_size
 
-/*
-clear_bss_loop:
-    cbz w6, kernel_launch
-    str xzr, [x5], #8
-    sub     w6, w6, #1
-    cbnz    w6, clear_bss_loop
-*/
-
 clear_bss:
     and x0, x0, x0
     adr x0, __bss_start
@@ -64,7 +53,7 @@ el1_entry:
     bl __create_page_tables
 
     // I change the SP to point to the first virtual address of the kernel
-    mov     x0, #VA_START   // 0x80074
+    mov     x0, #VA_START
     add     sp, x0, #LOW_MEMORY
 
     // I store the pgd filled previously in its register
@@ -83,13 +72,13 @@ el1_entry:
     // MMU so I keep the physical address and not the virtual one
     ldr     x2, =kernel_main
 
-    // I enable the MMU
 enable_mmu:
+    // I enable the MMU
     mov     x0, #SCTLR_MMU_ENABLED
     msr     sctlr_el1, x0
 
-    // Then I jump to the kernel_main
-    br      x2     // 0x800a8
+    // Then I jump to the kernel_main using x2, in which there is the physical address of the function
+    br      x2
 
     // This macro is a wrapper which calls all the macros to create directly the
     // entry both in PGD and in PUD
@@ -181,8 +170,10 @@ __create_page_tables:
     // Then I can call the macro passing also the flags
     create_block_map x0, x1, x2, x3, MMU_DEVICE_FLAGS, x4
 
-    /* This is an identity mapping which was used when virutal addresses were low
-       I don't want to remove it because maybe it will be useful
+    /*
+    This is an identity mapping which was used when the kernel was compiled with low virtual 
+    addresses. I don't want to remove it because maybe it will be useful. 
+
     // Since the kernel is put in the low memory, I create the identity map
     // for the low addresses to make the kernel able to map the 0x80000 addresses
     adrp    x0, pgd

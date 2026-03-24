@@ -1,6 +1,10 @@
 #ifndef __SYSCALLS_TYPES
 #define __SYSCALLS_TYPES
 
+/**
+ * syscalls_types.h defines the constants with the number of each available syscall
+ */
+
 #define SYSCALL_WRITE_NUMBER 0
 #define SYSCALL_MALLOC_NUMBER 1
 #define SYSCALL_EXIT_NUMBER 2
@@ -21,6 +25,7 @@
 #define SYSCALL_WAIT_NUMBER 17
 #define SYSCALL_WRITE_HEX_NUMBER 18
 
+// The maximum size of each argument passed to the exec systemcall
 #define SYSCALL_EXEC_ARGUMENT_DIMENSION 64
 
 #endif

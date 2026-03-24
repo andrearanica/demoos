@@ -3,7 +3,9 @@
 
 #include <stddef.h>
 
-extern int get_el(void);
-extern void delay(unsigned long);
+// Returns the exception level of the CPU
+extern int get_el();
+// Delays the cpu by the given number of cycles
+extern void delay(unsigned long cycles);
 
 #endif
