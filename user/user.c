@@ -13,8 +13,6 @@
 #define UART_WHITE_COLOR "\x1B[37m\0"
 #define UART_CLEAR_SCREEN "\e[1;1H\e[2J\0"
 
-// Max dimension of a path handled by the shell
-#define MAX_PATH_DIMENSION 64
 // Max dimension of a command handled by the shell
 #define MAX_COMMAND_DIMENSION 64
 // Max dimension of the buffer which handles files operations
@@ -38,7 +36,7 @@ void handle_exec(char* buffer, char* working_directory);
 void handle_exec_from_bin(char* buffer);
 
 void shell() {
-  char working_directory[MAX_PATH_DIMENSION] = "/";
+  char working_directory[FAT_MAX_PATH_SIZE] = "/";
 
   char* ascii_art[6] = {
     "▄▄▄▄▄▄                          ▄▄▄▄▄    ▄▄▄▄▄▄▄ ",
@@ -168,10 +166,10 @@ void handle_mkdir(char *buffer, char *working_directory) {
     return;
   }
 
-  char temp[MAX_PATH_DIMENSION];
-  memset(temp, 0, MAX_PATH_DIMENSION);
+  char temp[FAT_MAX_PATH_SIZE];
+  memset(temp, 0, FAT_MAX_PATH_SIZE);
 
-  if (strlen(working_directory) < MAX_PATH_DIMENSION) {
+  if (strlen(working_directory) < FAT_MAX_PATH_SIZE) {
     strcat(temp, working_directory);
   } else {
     call_syscall_write("[SHELL] Error: working directory string is too big.\n");
@@ -205,10 +203,10 @@ void handle_cd(char *buffer, char *working_directory) {
 
   if (destination[0] == '/') {
     // If the path is absolute I don't need to use working directory
-    memcpy(temp, destination, MAX_PATH_DIMENSION);
+    memcpy(temp, destination, FAT_MAX_PATH_SIZE);
   } else {
     // If the path is relative, I append the working directory
-    memcpy(temp, working_directory, MAX_PATH_DIMENSION);
+    memcpy(temp, working_directory, FAT_MAX_PATH_SIZE);
     int len = strlen(temp);
 
     if (len > 2 && temp[len - 1] != '/') {
@@ -227,22 +225,22 @@ void handle_cd(char *buffer, char *working_directory) {
     return;
   }
 
-  memcpy(working_directory, temp, MAX_PATH_DIMENSION);
+  memcpy(working_directory, temp, FAT_MAX_PATH_SIZE);
 }
 
 void handle_show(char* buffer, char* working_directory) {
   char command[MAX_COMMAND_DIMENSION] = {0};
   char destination[MAX_COMMAND_DIMENSION] = {0};
-  char temp[MAX_PATH_DIMENSION] = {0};
+  char temp[FAT_MAX_PATH_SIZE] = {0};
 
   strsplit(buffer, ' ', command, destination);
 
   if (destination[0] == '/') {
     // If the path is absolute I don't need to use working directory
-    memcpy(temp, destination, MAX_PATH_DIMENSION);
+    memcpy(temp, destination, FAT_MAX_PATH_SIZE);
   } else {
     // If the path is relative, I append the working directory
-    memcpy(temp, working_directory, MAX_PATH_DIMENSION);
+    memcpy(temp, working_directory, FAT_MAX_PATH_SIZE);
     int len = strlen(temp);
 
     if (len > 2 && temp[len - 1] != '/') {
@@ -338,7 +336,7 @@ void print_tree(const char *path, int depth) {
       call_syscall_write("\n");
     }
     if (info.is_dir) {
-      char child_path[MAX_PATH_DIMENSION] = {0};
+      char child_path[FAT_MAX_PATH_SIZE] = {0};
       strcpy(child_path, path);
       int len = strlen(child_path);
       if (child_path[len - 1] != '/') {
@@ -354,14 +352,14 @@ void print_tree(const char *path, int depth) {
 void handle_tree(char *buffer, char *working_directory) {
   char command[MAX_COMMAND_DIMENSION] = {0};
   char target[MAX_COMMAND_DIMENSION] = {0};
-  char fullpath[MAX_PATH_DIMENSION] = {0};
+  char fullpath[FAT_MAX_PATH_SIZE] = {0};
   strsplit(buffer, ' ', command, target);
   if (target[0] == 0) {
-    memcpy(fullpath, working_directory, MAX_PATH_DIMENSION);
+    memcpy(fullpath, working_directory, FAT_MAX_PATH_SIZE);
   } else if (target[0] == '/') {
-    memcpy(fullpath, target, MAX_PATH_DIMENSION);
+    memcpy(fullpath, target, FAT_MAX_PATH_SIZE);
   } else {
-    memcpy(fullpath, working_directory, MAX_PATH_DIMENSION);
+    memcpy(fullpath, working_directory, FAT_MAX_PATH_SIZE);
     int len = strlen(fullpath);
     if (len > 1 && fullpath[len - 1] != '/') {
       strcat(fullpath, "/");
@@ -412,8 +410,8 @@ void handle_write(char* buffer, char* working_directory) {
 
   file_content[i] = '\0';
 
-  char file_path[MAX_PATH_DIMENSION] = {0};
-  if (strlen(working_directory) + strlen(file_name) < MAX_PATH_DIMENSION) {
+  char file_path[FAT_MAX_PATH_SIZE] = {0};
+  if (strlen(working_directory) + strlen(file_name) < FAT_MAX_PATH_SIZE) {
     strcat(file_path, working_directory);
     strcat(file_path, file_name);
   } else {
@@ -500,8 +498,8 @@ void handle_exec(char* buffer, char* working_directory) {
     return;
   }
 
-  char complete_path[MAX_PATH_DIMENSION] = {0};
-  if (strlen(working_directory) + strlen(path) >= MAX_PATH_DIMENSION) {
+  char complete_path[FAT_MAX_PATH_SIZE] = {0};
+  if (strlen(working_directory) + strlen(path) >= FAT_MAX_PATH_SIZE) {
     call_syscall_write("[SHELL] Path is too long.\n");
     return;
   }
@@ -532,15 +530,15 @@ void handle_exec(char* buffer, char* working_directory) {
 }
 
 void handle_exec_from_bin(char* buffer) {
-  char file_name[MAX_PATH_DIMENSION] = {0};
-  memzero((unsigned long)file_name, MAX_PATH_DIMENSION);
-  char arguments_raw[MAX_PATH_DIMENSION] = {0};
-  memzero((unsigned long)arguments_raw, MAX_PATH_DIMENSION);
+  char file_name[FAT_MAX_PATH_SIZE] = {0};
+  memzero((unsigned long)file_name, FAT_MAX_PATH_SIZE);
+  char arguments_raw[FAT_MAX_PATH_SIZE] = {0};
+  memzero((unsigned long)arguments_raw, FAT_MAX_PATH_SIZE);
 
   strsplit(buffer, ' ', file_name, arguments_raw);
 
-  char complete_path[MAX_PATH_DIMENSION] = {0};
-  if (strlen("/bin/") + strlen(file_name) + strlen(".bin") >= MAX_PATH_DIMENSION) {
+  char complete_path[FAT_MAX_PATH_SIZE] = {0};
+  if (strlen("/bin/") + strlen(file_name) + strlen(".bin") >= FAT_MAX_PATH_SIZE) {
     call_syscall_write("[SHELL] Path is too long.\n");
     return;
   }
@@ -551,8 +549,8 @@ void handle_exec_from_bin(char* buffer) {
   normalize_path(complete_path);
 
   int n_arguments = 0;
-  char arguments[MAX_EXEC_ARGUMENTS][MAX_PATH_DIMENSION];
-  memzero((unsigned long)arguments, MAX_EXEC_ARGUMENTS * MAX_PATH_DIMENSION);
+  char arguments[MAX_EXEC_ARGUMENTS][FAT_MAX_PATH_SIZE];
+  memzero((unsigned long)arguments, MAX_EXEC_ARGUMENTS * FAT_MAX_PATH_SIZE);
 
   while (strlen(arguments_raw) > 0 && n_arguments < MAX_EXEC_ARGUMENTS) {
     char temp[] = {0};
