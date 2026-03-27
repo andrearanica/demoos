@@ -1,3 +1,0 @@
-[submodule "libs/fat32"]
-	path = libs/fat32
-	url = git@github.com:strawberryhacker/fat32.git
