@@ -29,7 +29,7 @@ void _schedule() {
   long max_counter, next_process_index;
 
   while (1) {
-    max_counter = -1;
+    max_counter = 0;
     next_process_index = 0;
     for (int i = 0; i < N_PROCESSES; i++) {
       if (processes[i]) {
@@ -41,7 +41,7 @@ void _schedule() {
       }
     }
 
-    if (max_counter > -1) {
+    if (max_counter > 0) {
       break;
     }
 
@@ -66,7 +66,7 @@ void _schedule() {
 // Asks the scheduler to stop the current project to run another one
 void schedule() {
   // I give the current process the lower priority
-  current_process->counter = -1;
+  current_process->counter = 0;
   _schedule();
 }
 
