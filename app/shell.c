@@ -5,13 +5,13 @@
 #include "../common/ipc_types.h"
 #include "../common/syscalls_types.h"
 
-#define UART_NORMAL_COLOR "\x1B[0m\0"
-#define UART_RED_COLOR "\x1B[31m\0"
-#define UART_GREEN_COLOR "\x1B[32m\0"
-#define UART_YELLOW_COLOR "\x1B[33m\0"
-#define UART_BLUE_COLOR "\x1B[34m\0"
-#define UART_WHITE_COLOR "\x1B[37m\0"
-#define UART_CLEAR_SCREEN "\e[1;1H\e[2J\0"
+#define UART_NORMAL_COLOR "\x1B[0m"
+#define UART_RED_COLOR "\x1B[31m"
+#define UART_GREEN_COLOR "\x1B[32m"
+#define UART_YELLOW_COLOR "\x1B[33m"
+#define UART_BLUE_COLOR "\x1B[34m"
+#define UART_WHITE_COLOR "\x1B[37m"
+#define UART_CLEAR_SCREEN "\e[1;1H\e[2J"
 
 // Max dimension of a command handled by the shell
 #define MAX_COMMAND_DIMENSION 64
@@ -99,27 +99,26 @@ void shell() {
 }
 
 void handle_help() {
-    call_syscall_write("[demoos shell]\n\0");
-    call_syscall_write("Available commands:\n\0");
-    call_syscall_write("  help       - Show this help message\n\0");
-    call_syscall_write("  pwd        - Show the current working directory\n\0");
-    call_syscall_write("  ls         - Show content of the current folder\n\0");
-    call_syscall_write("  tree       - Show directory tree\n\0");
-    call_syscall_write("  mkdir      - Create a directory in the working directory\n\0");
-    call_syscall_write("  write      - Creates a file and writes the given content in it\n\0");
-    call_syscall_write("  show       - Shows the content of the given file\n\0");
-    call_syscall_write("  clear      - Clears the screen\n\0");
-    call_syscall_write("  fork       - Forks the current process, and the new one will send a message to the father\n\0");
-    call_syscall_write("  signals    - Tests the signals by creating and killing a process\n\0");
-    call_syscall_write("  exec       - Forks the current process and launches a new one from the file system\n\0");
+    call_syscall_write("[demoos shell]\n");
+    call_syscall_write("Available commands:\n");
+    call_syscall_write("  help       - Show this help message\n");
+    call_syscall_write("  pwd        - Show the current working directory\n");
+    call_syscall_write("  ls         - Show content of the current folder\n");
+    call_syscall_write("  tree       - Show directory tree\n");
+    call_syscall_write("  mkdir      - Create a directory in the working directory\n");
+    call_syscall_write("  write      - Creates a file and writes the given content in it\n");
+    call_syscall_write("  show       - Shows the content of the given file\n");
+    call_syscall_write("  clear      - Clears the screen\n");
+    call_syscall_write("  exec       - Forks the current process and launches a new one from the file system, given its path\n");
+    call_syscall_write("  any        - If '/bin/any.bin' is a file, launches it as a new process\n");
 }
 
 void handle_ls(char *working_directory) {
   int fd = call_syscall_open_dir(working_directory);
   if (fd == -1) {
-    call_syscall_write("[SHELL] Error opening folder '\0");
+    call_syscall_write("[SHELL] Error opening folder '");
     call_syscall_write(working_directory);
-    call_syscall_write("'.\n\0");
+    call_syscall_write("'.\n");
     return;
   }
 
@@ -132,9 +131,9 @@ void handle_ls(char *working_directory) {
       }
 
       if (info.is_dir) {
-          call_syscall_write("\x1b[34m\0");
+          call_syscall_write("\x1b[34m");
           call_syscall_write(info.name);
-          call_syscall_write("\x1b[0m\0");
+          call_syscall_write("\x1b[0m");
       } else {
           call_syscall_write(info.name);
       }
