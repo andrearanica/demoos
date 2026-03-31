@@ -270,6 +270,13 @@ int syscall_exec(char* path, unsigned long* trap_frame, int n_arguments, char ar
     return -1;
   }
 
+  // Before cleaning memory, I need to save the arguments because they will be deleted
+  char safe_arguments[n_arguments][SYSCALL_EXEC_ARGUMENT_DIMENSION];
+  memzero((unsigned long)safe_arguments, n_arguments * SYSCALL_EXEC_ARGUMENT_DIMENSION);
+  for (int i = 0; i < n_arguments; i++) {
+    strcpy(safe_arguments[i], arguments[i]);
+  }
+
   int n_user_pages = current_process->mm.n_user_pages;
   for (int i = 0; i < n_user_pages; i++) {
     unsigned long user_page = current_process->mm.user_pages[i].physical_address + VA_START;
@@ -287,16 +294,16 @@ int syscall_exec(char* path, unsigned long* trap_frame, int n_arguments, char ar
   for (int i = 0; i < n_arguments; i++) {
     stack_pointer -= SYSCALL_EXEC_ARGUMENT_DIMENSION;
     unsigned long* stack_pointer_kernel_address = (unsigned long*)user_to_kernel_address(stack_pointer);
-    strcpy((char*)stack_pointer_kernel_address, arguments[i]);
+    strcpy((char*)stack_pointer_kernel_address, safe_arguments[i]);
     trap_frame[i + 1] = stack_pointer;
   }
-  
+
   current_process->cpu_context.pc = 0;
   current_process->cpu_context.sp = stack_pointer;
 
   trap_frame[31] = stack_pointer;  // I reset the stack pointer
   trap_frame[32] = 0;              // I reset the program counter
-  
+
   return 0;
 }
 

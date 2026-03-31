@@ -1369,8 +1369,8 @@ int fat_file_write(File* file, const void* buf, int len, int* bytes)
     src += cnt;
     len -= cnt;
 
-    int err = fat_file_seek(file, cnt, FAT_SEEK_CURR);
-    if (err)
+    int e = fat_file_seek(file, cnt, FAT_SEEK_CURR);
+    if (e)
       break;
   }
 

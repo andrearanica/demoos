@@ -42,7 +42,6 @@
 #ifndef __ASSEMBLER__
 
 #include <stddef.h>
-extern unsigned long pgd;
 unsigned long get_free_page();
 int free_page(unsigned long p);
 void map_page(struct PCB* process, unsigned long virtual_address, unsigned long page);
