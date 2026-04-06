@@ -1,4 +1,4 @@
-#include "user.h"
+#include "init.h"
 #include "../common/user_syscalls.h"
 
 #include <stddef.h>

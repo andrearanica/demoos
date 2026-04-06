@@ -7,7 +7,7 @@
 #include "../libs/scheduler.h"
 #include "../libs/syscalls.h"
 #include "../libs/utils.h"
-#include "../user/user.h"
+#include "../init/init.h"
 #include <stddef.h>
 #include <stdint.h>
 
@@ -40,18 +40,22 @@ void kernel_main() {
   timer_init();
   uart_puts("[DONE] timer init\n");
 
-  while (1) {}
+  while (1) {
+
+  }
 }
 
 void kernel_process() {
     uart_puts("[DEBUG] Kernel process started.\n");
 
     unsigned long process = (unsigned long)&init_process_main;
-    unsigned long size = ((unsigned long)&user_end - (unsigned long)&user_begin);
-    unsigned long pc = (process - (unsigned long)&user_begin);
+    unsigned long size = ((unsigned long)&init_end - (unsigned long)&init_begin);
+    unsigned long pc = (process - (unsigned long)&init_begin);
 
-    int error = move_to_user_mode((unsigned long)&user_begin, size, pc);
+    int error = move_to_user_mode((unsigned long)&init_begin, size, pc);
     if (error < 0) {
         uart_puts("[ERROR] Cannot move process from kernel mode to user mode\n");
     }
+
+    exit_process();
 }

@@ -9,8 +9,8 @@ CFLAGS := -Wall -Wextra -O2 -ffreestanding -nostdlib -nostartfiles -fno-stack-pr
 LDFLAGS := -nostdlib
 
 # Sources
-C_SRCS := $(wildcard drivers/*/*.c kernel/*.c utils/*.c libs/*.c libs/fat32/fat.c user/*.c common/*.c)
-S_SRCS := $(wildcard drivers/*/*.S boot/*.S libs/*.S user/*.S common/*.S)
+C_SRCS := $(wildcard drivers/*/*.c kernel/*.c utils/*.c libs/*.c libs/fat32/fat.c init/*.c common/*.c)
+S_SRCS := $(wildcard drivers/*/*.S boot/*.S libs/*.S init/*.S common/*.S)
 PSF_SRCS := $(wildcard font/*.psf)
 
 # Objects

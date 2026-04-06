@@ -7,24 +7,24 @@ SECTIONS
 	.text.boot : { *(.text.boot) }
 
     . = ALIGN(0x00001000);
-	user_begin = .;
-	.text.user : {
-		*user.o (.text .text.*)
+	init_begin = .;
+	.text.init : {
+		*init.o (.text .text.*)
 		*memory.o (.text .text.*)
 		*string.o (.text .text.*)
 	}
-	.rodata.user : {
-		*user.o (.rodata .rodata.*)
+	.rodata.init : {
+		*init.o (.rodata .rodata.*)
 		*memory.o (.rodata .rodata.*)
 		*string.o (.rodata .rodata.*)
 	}
-	.data.user : {
-		*user.o (.data .data.*)
+	.data.init : {
+		*init.o (.data .data.*)
 		*memory.o (.data . data.*)
 		*string.o (.data .data.*)
 	}
     . = ALIGN(0x00001000);
-	user_end = .;
+	init_end = .;
 
     .text : { *(.text) }
 	__font_start = .;
@@ -47,7 +47,7 @@ SECTIONS
 	{
 		*(.bss)
 	}
-	.bss.user : { build/user* (.bss) }
+	.bss.init : { build/init* (.bss) }
 	. = ALIGN(4096);
 	__bss_end = .;
 	__bss_size = __bss_end - __bss_start;
